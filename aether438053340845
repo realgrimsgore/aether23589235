@@ -1,0 +1,3617 @@
+
+print('Aether')
+local HttpService = game:GetService("HttpService")
+local StarterGui = game:GetService("StarterGui")
+local LuaName = "Aether"
+
+StarterGui:SetCore("SendNotification", {
+	Title = Aether,
+	Text = "Intializing Authentication...",
+	Duration = 5
+})
+
+--* Configuration *--
+local initialized = false
+local sessionid = ""
+
+
+--* Application Details *--
+Name = "Aether" --* Application Name
+Ownerid = "w0aqQCqwWC" --* OwnerID
+APPVersion = "1.0"     --* Application Version
+
+local req = game:HttpGet('https://keyauth.win/api/1.1/?name=' .. Name .. '&ownerid=' .. Ownerid .. '&type=init&ver=' .. APPVersion)
+
+if req == "KeyAuth_Invalid" then 
+   print(" Error: Application not found.")
+
+   StarterGui:SetCore("SendNotification", {
+	   Title = Aether,
+	   Text = " Error: Application not found.",
+	   Duration = 3
+   })
+
+   return false
+end
+
+local data = HttpService:JSONDecode(req)
+
+if data.success == true then
+   initialized = true
+   sessionid = data.sessionid
+   --print(req)
+elseif (data.message == "invalidver") then
+   print(" Error: Wrong application version..")
+
+   StarterGui:SetCore("SendNotification", {
+	   Title = LuaName,
+	   Text = " Error: Wrong application version..",
+	   Duration = 3
+   })
+
+   return false
+else
+   print(" Error: " .. data.message)
+   return false
+end
+
+print("\n\n Licensing... \n")
+local req = game:HttpGet('https://keyauth.win/api/1.1/?name=' .. Name .. '&ownerid=' .. Ownerid .. '&type=license&key=' .. License ..'&ver=' .. APPVersion .. '&sessionid=' .. sessionid)
+local data = HttpService:JSONDecode(req)
+
+
+if data.success == false then 
+    StarterGui:SetCore("SendNotification", {
+	    Title = LuaName,
+	    Text = " Error: " .. data.message,
+	    Duration = 5
+    })
+
+    return false
+end
+
+StarterGui:SetCore("SendNotification", {
+	Title = LuaName,
+	Text = " Successfully Authorized :)",
+	Duration = 5
+})
+
+
+--* Your code here *--
+
+
+-- define the settings
+getgenv().Configurations = {
+    SilentAim = {
+        Enabled = false,
+        Aimpart = "LowerTorso",
+        Prediction = 0.13913,
+        AutomaticPrediction = false,
+        ClosestPart = false,
+        ClosestPoint = false,
+
+        Airshot = {
+            Enabled = false,
+            Aimpart = "UpperTorso",
+            UseAirprediction = true,
+            AirPrediction = 0.1291,
+            UseJumpOffset = true,
+            JumpOffset = 0.012
+        },
+
+        Visuals = {
+            Tracer = false,
+            Highlight = false,
+
+            TracerColor = Color3.fromRGB(255,255,255),
+            TracerThickness = 1,
+            HighlightFillColor = Color3.fromRGB(255,255,255),
+            HighlightOutlineColor = Color3.fromRGB(0,0,0),
+
+            Dot = false,
+            DotColor = Color3.fromRGB(255,255,255),
+            DotSize = 5,
+        },
+
+        FieldOfView = {
+            Visible = false,
+            Radius = 120,
+            Color = Color3.fromRGB(255,255,255),
+            Filled = false,
+            Transparency = 1
+        },
+        
+        Resolver = {
+            Enabled = false,
+            Method = "0 Velocity"
+        }
+
+    };
+
+    AimAssist = {
+        Enabled = false,
+        Toggled = false,
+        Aimpart = "HumanoidRootPart",
+        Prediction = 0.134,
+        AutomaticPrediction = false,
+        ClosestPart = false,
+
+        Airshot = {
+            Enabled = false,
+            Aimpart = "UpperTorso",
+            UseAirprediction = true,
+            AirPrediction = 0.1291,
+            UseJumpOffset = true,
+            JumpOffset = 0.012
+        },
+
+        Smoothness = {
+            Enabled = false,
+            SmoothingFactor = 0.04313 -- only float numbers
+        },
+
+        Shake = {
+            Enabled = false,
+            UseAxisShaking = false,
+
+            Shaking = 1.3,
+            ShakeX = 4,
+            ShakeY = 9,
+            ShakeZ = 12
+        },
+
+        Humanize = {
+            Enabled = false,
+            Power = 0.092
+        }
+    };
+    Target = {
+        Enabled = false,
+        Toggled = false,
+        Aimpart = "Head",
+        Prediction = 0.134,
+        AutomaticPrediction = false,
+        ClosestPart = false,
+
+        Airshot = {
+            Enabled = false,
+            Aimpart = "UpperTorso",
+            UseAirprediction = true,
+            AirPrediction = 0.1291,
+            UseJumpOffset = true,
+            JumpOffset = 0.012
+        },
+
+        Strafe = {
+            Enabled = false,
+            Height = 5,
+            Distance = 10,
+            Speed = 5
+        },
+
+        Visuals = {
+            Tracer = false,
+            Highlight = false,
+
+            TracerColor = Color3.fromRGB(255,255,255),
+            TracerThickness = 1,
+            HighlightFillColor = Color3.fromRGB(255,255,255),
+            HighlightOutlineColor = Color3.fromRGB(0,0,0)
+        },
+    }
+}
+
+-- define the variables and services
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace         = game:GetService("Workspace")
+local TweenService      = game:GetService("TweenService")
+local Configurations    = getgenv().Configurations -- you can just do Configurations but i defined it since i dont want that yellow indicator on my roblox lsp
+
+
+local LocalPlayer       = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+local draw = Drawing.new
+local tweenInfo = TweenInfo.new(0.25,Enum.EasingStyle.Quad,Enum.EasingDirection.InOut)
+
+getgenv().triggerbotcfg = {
+    Enabled = false,
+    Visualize = false,
+    Prediction = 0.1355,
+    AutomaticPrediction = false,
+    Range = 15,
+    useDelay = false,
+    Delay = 0.02
+}
+
+local function wallcheckskibidi(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+    local targetPosition = targetPlayer.Character.HumanoidRootPart.Position
+    local startPosition = Camera.CFrame.Position
+    local ray = Ray.new(startPosition, (targetPosition - startPosition).unit * (targetPosition - startPosition).magnitude)
+    local hit, position = Workspace:FindPartOnRay(ray, targetPlayer.Character)
+    if hit then
+        return false 
+    else
+        return true
+    end
+end
+
+local function getClosestBodyPartToMouse(player)
+    if not player or not player.Character then
+        return nil
+    end
+
+    local minDistance = math.huge
+    local closestBodyPart = nil
+    local mousePos = UserInputService:GetMouseLocation()
+
+    local character = player.Character
+    for _, partName in pairs({"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso", "LeftLeg", "RightLeg", "LeftArm", "RightArm"}) do
+        local part = character:FindFirstChild(partName)
+        if part then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).magnitude
+                if distance < minDistance then
+                    minDistance = distance
+                    closestBodyPart = part
+                end
+            end
+        end
+    end
+
+    return closestBodyPart
+end
+
+local function getClosestPlayer()
+    local minDistance = math.huge
+    local mousePos = UserInputService:GetMouseLocation()
+    local closestPlayer
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer then
+            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and wallcheckskibidi(player) then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if onScreen then
+                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).magnitude
+                    if distance < minDistance then
+                        minDistance = distance
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function getDistance(plr)
+    local distance = (Players.LcoalPlayer.Character.HumanoidRootPart.Position-plr.Character.HumanoidRootPart.Position).magnitude
+    return distance
+end
+
+local circle = Drawing.new("Circle")
+circle.Transparency = 1
+circle.Thickness = 1
+circle.Radius = getgenv().triggerbotcfg.Range
+circle.Filled = false
+circle.Color = Color3.fromRGB(204, 255, 255)
+circle.Visible = false
+
+local Games = {
+    [2788229376]                     = {Name = "Da Hood", Arg = "UpdateMousePosI", Remote = "MainEvent"},
+    [16033173781]                    = {Name = "Da Hood Macro", Arg = "UpdateMousePosI", Remote = "MainEvent"},
+    [7213786345]                     = {Name = "Da Hood VC", Arg = "UpdateMousePosI", Remote = "MainEvent"},
+    [9825515356]                     = {Name = "Hood Customs", Arg = "MousePosUpdate", Remote = "MainEvent"},
+    [17895632819]                    = {Name = "Hood Spirit", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [5602055394]                     = {Name = "Hood Modded", Arg = "MousePos", Remote = "Bullets"},
+    [7951883376]                     = {Name = "Hood Modded VC", Arg = "MousePos", Remote = "Bullets"},
+    [9183932460]                     = {Name = "Untitled Hood", Arg = "UpdateMousePos", Remote = ".gg/untitledhood"},
+    [17403265390]                    = {Name = "Da Downhill", Arg = "MOUSE", Remote = "MAINEVENT"},
+    [14412601883]                    = {Name = "Hood Bank", Arg = "MOUSE", Remote = "MAINEVENT"},
+    [18111448661]                    = {Name = "Da Uphill", Arg = "MOUSE", Remote = "MAINEVENT"},
+    [14487637618]                    = {Name = "Da Hood Bot Aim Trainer", Arg = "MOUSE", Remote = "MAINEVENT"},
+    [11143225577]                    = {Name = "1v1 Hood Aim Trainer", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [14413712255]                    = {Name = "Hood Aim", Arg = "MOUSE", Remote = "MAINEVENT"},
+    [12927359803]                    = {Name = "Dah Aim Trainer", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [12867571492]                    = {Name = "Katana Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [11867820563]                    = {Name = "Dae Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17109142105]                    = {Name = "Da Battles", Arg = "MoonUpdateMousePos", Remote = "MainEvent"},
+    [15186202290]                    = {Name = "Da Strike", Arg = "MOUSE", Remote = "MAINEVENT"},
+    [16469595315]                    = {Name = "Del Hood Aim", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17319408836]                    = {Name = "OG Da Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [14975320521]                    = {Name = "Ar Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17200018150]                    = {Name = "Hood Of AR", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [15644861772]                    = {Name = "Flame Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17723797487]                    = {Name = "Dee Hood", Arg = "UpdateMousePosI", Remote = "MainEvent"},
+    [17897702920]                    = {Name = "Og Da Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17809101348]                    = {Name = "New Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17344804827]                    = {Name = "Yeno Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [16435867341]                    = {Name = "Mad Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [18128019573]                    = {Name = "Da Fights", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17079102898]                    = {Name = "italian hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [16859411452]                    = {Name = "hood z", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17718959553]                    = {Name = "bell hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [14277620939]                    = {Name = "custom ffa", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [18100659835]                    = {Name = "hood blatant", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [13504008904]                    = {Name = "dk hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [18700848369]                    = {Name = "Wood Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [18209866987]                    = {Name = "1v1 Hood 2", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [18128296193]                    = {Name = "Da Center", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [18111451594]                    = {Name = "Da Bank", Arg = "MOUSE", Remote = "MAINEVENT"},
+    [14800398569]                    = {Name = "United Hood Aim Trainer", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [18128226573]                    = {Name = "Da Military", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [16871610060]                    = {Name = "Comp Hood", Arg = "UpdateMousePos", Remote = "MainEvent"},
+    [17836920497]                    = {Name = "Da Bot Aim Trainer", Arg = "Mouse", Remote = "MAINEVENT"},
+}
+local hitsounds = {
+    Bubble = "rbxassetid://6534947588",
+    Lazer = "rbxassetid://130791043",
+    Pick = "rbxassetid://1347140027",
+    Pop = "rbxassetid://198598793",
+    Rust = "rbxassetid://1255040462",
+    Sans = "rbxassetid://3188795283",
+    Fart = "rbxassetid://130833677",
+    Big = "rbxassetid://5332005053",
+    Vine = "rbxassetid://5332680810",
+    UwU = "rbxassetid://8679659744",
+    Bruh = "rbxassetid://4578740568",
+    Skeet = "rbxassetid://5633695679",
+    Neverlose = "rbxassetid://6534948092",
+    Fatality = "rbxassetid://6534947869",
+    Bonk = "rbxassetid://5766898159"
+}
+
+local BodyParts = {
+    "Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightHand", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftFoot", "LeftLowerLeg",  "LeftUpperLeg", "RightLowerLeg", "RightFoot",  "RightUpperLeg"
+}
+
+local Library = {
+    Open = false,
+	Accent          = Color3.fromRGB(227, 127, 252);
+    BackgroundColor = Color3.fromRGB(19, 19, 19),
+    TabHolderColor  = Color3.fromRGB(23,23,23),
+    TabInactiveColor = Color3.fromRGB(59, 59, 59),
+    UIkey = Enum.KeyCode.End,
+	Dragging = false;
+	Tabs = {};
+	Keys = {
+		[Enum.KeyCode.LeftShift] = "LShift",
+		[Enum.KeyCode.RightShift] = "RShift",
+		[Enum.KeyCode.LeftControl] = "LCtrl",
+		[Enum.KeyCode.RightControl] = "RCtrl",
+		[Enum.KeyCode.LeftAlt] = "LAlt",
+		[Enum.KeyCode.RightAlt] = "RAlt",
+		[Enum.KeyCode.CapsLock] = "Caps",
+		[Enum.KeyCode.One] = "1",
+		[Enum.KeyCode.Two] = "2",
+		[Enum.KeyCode.Three] = "3",
+		[Enum.KeyCode.Four] = "4",
+		[Enum.KeyCode.Five] = "5",
+		[Enum.KeyCode.Six] = "6",
+		[Enum.KeyCode.Seven] = "7",
+		[Enum.KeyCode.Eight] = "8",
+		[Enum.KeyCode.Nine] = "9",
+		[Enum.KeyCode.Zero] = "0",
+		[Enum.KeyCode.KeypadOne] = "Num1",
+		[Enum.KeyCode.KeypadTwo] = "Num2",
+		[Enum.KeyCode.KeypadThree] = "Num3",
+		[Enum.KeyCode.KeypadFour] = "Num4",
+		[Enum.KeyCode.KeypadFive] = "Num5",
+		[Enum.KeyCode.KeypadSix] = "Num6",
+		[Enum.KeyCode.KeypadSeven] = "Num7",
+		[Enum.KeyCode.KeypadEight] = "Num8",
+		[Enum.KeyCode.KeypadNine] = "Num9",
+		[Enum.KeyCode.KeypadZero] = "Num0",
+		[Enum.KeyCode.Minus] = "-",
+		[Enum.KeyCode.Equals] = "=",
+		[Enum.KeyCode.Tilde] = "~",
+		[Enum.KeyCode.LeftBracket] = "[",
+		[Enum.KeyCode.RightBracket] = "]",
+		[Enum.KeyCode.RightParenthesis] = ")",
+		[Enum.KeyCode.LeftParenthesis] = "(",
+		[Enum.KeyCode.Semicolon] = ",",
+		[Enum.KeyCode.Quote] = "'",
+		[Enum.KeyCode.BackSlash] = "\\",
+		[Enum.KeyCode.Comma] = ",",
+		[Enum.KeyCode.Period] = ".",
+		[Enum.KeyCode.Slash] = "/",
+		[Enum.KeyCode.Asterisk] = "*",
+		[Enum.KeyCode.Plus] = "+",
+		[Enum.KeyCode.Period] = ".",
+		[Enum.KeyCode.Backquote] = "`",
+		[Enum.UserInputType.MouseButton1] = "MB1",
+		[Enum.UserInputType.MouseButton2] = "MB2",
+		[Enum.UserInputType.MouseButton3] = "MB3",
+        Flags = {},
+        Unnamedflags = 0
+	};
+}
+
+function Library:Round(Number, Float)
+	return Float * math.floor(Number / Float)
+end
+
+function Library:RGBA(r, g, b, alpha)
+    local rgb = Color3.fromRGB(r, g, b)
+    local mt = table.clone(getrawmetatable(rgb))
+
+    setreadonly(mt, false)
+    local old = mt.__index
+
+    mt.__index = newcclosure(function(self, key)
+        if key:lower() == "transparency" then
+            return alpha
+        end
+
+        return old(self, key)
+    end)
+
+    setrawmetatable(rgb, mt)
+
+    return rgb
+end
+
+function Library:Disconnect(Connection)
+    Connection:Disconnect()
+end
+
+function Library:NextFlag()
+    Library.Unnamedflags = Library.Unnamedflags + 1
+    return string.format("%.14g", Library.Unnamedflags)
+end
+
+function Library:GetConfig()
+    local Config = "";
+    for Index, Value in pairs(self.Flags) do
+        if Index ~= "ConfigConfig_List" and Index ~= "ConfigConfig_Load" and Index ~= "ConfigConfig_Save" then
+            local Value2 = Value
+            local Final = ""
+            --
+            if typeof(Value2) == "Color3" then
+                local hue, sat, val = Value2:ToHSV();
+                --
+                Final = ("rgb(%s,%s,%s,%s)"):format(hue, sat, val, Value2.Transparency)
+            elseif typeof(Value2) == "table" and Value2.Color and Value2.Transparency then
+                local hue, sat, val = Value2.Color:ToHSV()
+                --
+                Final = ("rgb(%s,%s,%s,%s)"):format(hue, sat, val, Value2.Transparency)
+            elseif typeof(Value2) == "table" and Value.Mode then
+                local Values = Value.current
+                --
+                Final = ("key(%s,%s,%s)"):format(Values[1] or "nil", Values[2] or "nil", Value.Mode)
+            elseif (Value2 ~= nil) then
+                if typeof(Value2) == "boolean" then
+                    Value2 = ("bool(%s)"):format(tostring(Value2))
+                elseif typeof(Value2) == "table" then
+                    local New = "table("
+                    --
+                    for Index2, Value3 in pairs(Value2) do
+                        New = New .. Value3 .. ","
+                    end
+                    --
+                    if New:sub(#New) == "," then
+                        New = New:sub(0, #New - 1)
+                    end
+                    --
+                    Value2 = New .. ")"
+                elseif typeof(Value2) == "string" then
+                    Value2 = ("string(%s)"):format(Value2)
+                elseif typeof(Value2) == "number" then
+                    Value2 = ("number(%s)"):format(Value2)
+                end
+                --
+                Final = Value2
+            end
+            --
+            Config = Config .. Index .. ": " .. Final .. "\n"
+        end
+    end
+    --
+    return Config
+end;
+--
+function Library:LoadConfig(Config)
+    local Table = string.split(Config, "\n")
+    local Table2 = {};
+    for Index, Value in pairs(Table) do
+        local Table3 = string.split(Value, ":")
+        --
+        if Table3[1] ~= "ConfigConfig_List" and #Table3 >= 2 then
+            local Value = Table3[2]:sub(2, #Table3[2])
+            --
+            if Value:sub(1, 3) == "rgb" then
+                local Table4 = string.split(Value:sub(5, #Value - 1), ",")
+                --
+                Value = Table4
+            elseif Value:sub(1, 3) == "key" then
+                local Table4 = string.split(Value:sub(5, #Value - 1), ",")
+                --
+                if Table4[1] == "nil" and Table4[2] == "nil" then
+                    Table4[1] = nil
+                    Table4[2] = nil
+                end
+                --
+                Value = Table4
+            elseif Value:sub(1, 4) == "bool" then
+                local Bool = Value:sub(6, #Value - 1)
+                --
+                Value = Bool == "true"
+            elseif Value:sub(1, 5) == "table" then
+                local Table4 = string.split(Value:sub(7, #Value - 1), ",")
+                --
+                Value = Table4
+            elseif Value:sub(1, 6) == "string" then
+                local String = Value:sub(8, #Value - 1)
+                --
+                Value = String
+            elseif Value:sub(1, 6) == "number" then
+                local Number = tonumber(Value:sub(8, #Value - 1))
+                --
+                Value = Number
+            end
+            --
+            Table2[Table3[1]] = Value
+        end
+    end
+    --             
+    for i,v in pairs(Table2) do
+        if Flags[i] then
+            if typeof(Flags[i]) == "table" then
+                Flags[i]:Set(v);
+            else
+                Flags[i](v);
+            end
+        end;
+    end;
+end;
+
+function Library:IsMouseOverFrame(Frame)
+    local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize;
+
+    if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X
+        and Mouse.Y >= AbsPos.Y and Mouse.Y <= AbsPos.Y + AbsSize.Y then
+
+        return true;
+    end;
+end;
+
+function Library:Window(Properties)
+	local Window = {
+        Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'Window'
+    }
+
+	-- StarterGui.obeseui
+	Window["1"] = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"));
+	Window["1"]["Name"] = [[obeseui]];
+	Window["1"]["ZIndexBehavior"] = Enum.ZIndexBehavior.Sibling;
+    Window["1"].ResetOnSpawn = false
+
+	-- StarterGui.obeseui.main
+	Window["2"] = Instance.new("Frame", Window["1"]);
+	Window["2"]["BorderSizePixel"] = 0;
+	Window["2"]["BackgroundColor3"] = Library.BackgroundColor;
+	Window["2"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
+	Window["2"]["Size"] = UDim2.new(0, 580, 0, 490);
+	Window["2"]["Position"] = UDim2.new(0.5, 0, 0.5, 0);
+	Window["2"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["2"]["Name"] = [[main]];
+
+	-- StarterGui.obeseui.main.UICorner
+	Window["3"] = Instance.new("UICorner", Window["2"]);
+	Window["3"]["CornerRadius"] = UDim.new(0.01, 5);
+
+	-- StarterGui.obeseui.main.topbar
+	Window["4"] = Instance.new("Frame", Window["2"]);
+	Window["4"]["ZIndex"] = 94134691;
+	Window["4"]["BorderSizePixel"] = 0;
+	Window["4"]["BackgroundColor3"] = Library.Accent;
+	Window["4"]["Size"] = UDim2.new(1, 0, 0, 25);
+	Window["4"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["4"]["Name"] = [[topbar]];
+
+	-- StarterGui.obeseui.main.topbar.UICorner
+	Window["5"] = Instance.new("UICorner", Window["4"]);
+	Window["5"]["CornerRadius"] = UDim.new(0.01, 5);
+
+	-- StarterGui.obeseui.main.topbar.title
+	Window["6"] = Instance.new("TextLabel", Window["4"]);
+	Window["6"]["TextStrokeTransparency"] = 0;
+	Window["6"]["BorderSizePixel"] = 0;
+	Window["6"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+	Window["6"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	Window["6"]["TextSize"] = 14;
+	Window["6"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+	Window["6"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+	Window["6"]["BackgroundTransparency"] = 1;
+	Window["6"]["RichText"] = true;
+	Window["6"]["Size"] = UDim2.new(1, 0, 1, 0);
+	Window["6"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["6"]["Text"] = Window.Name;
+	Window["6"]["Name"] = [[title]];
+
+	-- StarterGui.obeseui.main.topbar.title.UIPadding
+	Window["7"] = Instance.new("UIPadding", Window["6"]);
+	Window["7"]["PaddingLeft"] = UDim.new(0, 5);
+
+	-- StarterGui.obeseui.main.topbar.extension
+	Window["8"] = Instance.new("Frame", Window["4"]);
+	Window["8"]["ZIndex"] = -314;
+	Window["8"]["BorderSizePixel"] = 0;
+	Window["8"]["BackgroundColor3"] = Library.Accent;
+	Window["8"]["AnchorPoint"] = Vector2.new(0, 1);
+	Window["8"]["Size"] = UDim2.new(1, 0, 0, 23);
+	Window["8"]["Position"] = UDim2.new(0, 0, 1, 0);
+	Window["8"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["8"]["Name"] = [[extension]];
+
+	-- StarterGui.obeseui.main.topbar.extension.UIGradient
+	Window["9"] = Instance.new("UIGradient", Window["8"]);
+	Window["9"]["Rotation"] = 90;
+	Window["9"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+	-- StarterGui.obeseui.main.topbar.extratext
+	Window["a"] = Instance.new("TextLabel", Window["4"]);
+	Window["a"]["TextStrokeTransparency"] = 0;
+	Window["a"]["BorderSizePixel"] = 0;
+	Window["a"]["TextXAlignment"] = Enum.TextXAlignment.Right;
+	Window["a"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	Window["a"]["TextSize"] = 14;
+	Window["a"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+	Window["a"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+	Window["a"]["BackgroundTransparency"] = 1;
+	Window["a"]["RichText"] = true;
+	Window["a"]["Size"] = UDim2.new(1, 0, 1, 0);
+	Window["a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["a"]["Text"] = Properties.ExtraText or '';
+	Window["a"]["Name"] = [[extratext]];
+
+	-- StarterGui.obeseui.main.topbar.extratext.UIPadding
+	Window["b"] = Instance.new("UIPadding", Window["a"]);
+	Window["b"]["PaddingRight"] = UDim.new(0, 5);
+
+	-- StarterGui.obeseui.main.tabs
+	Window["c"] = Instance.new("Frame", Window["2"]);
+	Window["c"]["BorderSizePixel"] = 0;
+	Window["c"]["BackgroundColor3"] = Library.TabHolderColor;
+	Window["c"]["Size"] = UDim2.new(0.25, 0, 0.9, 0);
+	Window["c"]["Position"] = UDim2.new(0, 15, 0, 35);
+	Window["c"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["c"]["Name"] = [[tabs]];
+
+	-- StarterGui.obeseui.main.tabs.UIStroke
+	Window["d"] = Instance.new("UIStroke", Window["c"]);
+	Window["d"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+	-- StarterGui.obeseui.main.tabs.UIGradient
+	Window["e"] = Instance.new("UIGradient", Window["c"]);
+	Window["e"]["Rotation"] = 90;
+	Window["e"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+	-- StarterGui.obeseui.main.tabs.UICorner
+	Window["f"] = Instance.new("UICorner", Window["c"]);
+	Window["f"]["CornerRadius"] = UDim.new(0.01, 5);
+
+	-- StarterGui.obeseui.main.tabs.holder
+	Window["10"] = Instance.new("Frame", Window["c"]);
+	Window["10"]["BorderSizePixel"] = 0;
+	Window["10"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+	Window["10"]["Size"] = UDim2.new(1, 0, 0.98, 0);
+	Window["10"]["Position"] = UDim2.new(0, 0, 0, 5);
+	Window["10"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["10"]["Name"] = [[holder]];
+	Window["10"]["BackgroundTransparency"] = 1;
+
+	-- StarterGui.obeseui.main.tabs.holder.UIListLayout
+	Window["11"] = Instance.new("UIListLayout", Window["10"]);
+	Window["11"]["HorizontalAlignment"] = Enum.HorizontalAlignment.Center;
+	Window["11"]["Padding"] = UDim.new(0, 7);
+	Window["11"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+
+	-- StarterGui.obeseui.main.contentcontainer
+	Window["21"] = Instance.new("Frame", Window["2"]);
+	Window["21"]["BorderSizePixel"] = 0;
+	Window["21"]["BackgroundColor3"] = Library.BackgroundColor;
+	Window["21"]["Size"] = UDim2.new(0.67, 0, 0.9, 0);
+	Window["21"]["Position"] = UDim2.new(0, 175, 0, 35);
+	Window["21"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+	Window["21"]["Name"] = [[contentcontainer]];
+
+	-- StarterGui.obeseui.main.contentcontainer.UICorner
+	Window["22"] = Instance.new("UICorner", Window["21"]);
+	Window["22"]["CornerRadius"] = UDim.new(0.01, 5);
+
+	-- StarterGui.obeseui.main.contentcontainer.UIGradient
+	Window["23"] = Instance.new("UIGradient", Window["21"]);
+	Window["23"]["Rotation"] = 90;
+	Window["23"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+	-- StarterGui.obeseui.main.contentcontainer.UIStroke
+	Window["24"] = Instance.new("UIStroke", Window["21"]);
+	Window["24"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+    UserInputService.InputBegan:Connect(function(inp,gpe)
+        if gpe then return end 
+        
+        if inp.KeyCode == Library.UIkey and Library.Open then 
+        Window["2"].Visible = false
+        Library.Open = false  
+        elseif inp.KeyCode == Library.UIkey and not Library.Open then 
+            Window["2"].Visible = true
+            Library.Open = true 
+        end
+    end)
+
+	local gui = Window["2"]
+	local dragInput, dragStart, startPos
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		TweenService:Create(gui, TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
+	end
+
+	gui.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			Library.Dragging = true
+			dragStart = input.Position
+			startPos = gui.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					Library.Dragging = false
+				end
+			end)
+		end
+	end)
+
+	gui.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and Library.Dragging then
+			update(input)
+		end
+	end)
+
+     -- StarterGui.obeseui.notificationholders
+     Window["8b"] = Instance.new("Frame", Window["1"]);
+     Window["8b"]["BorderSizePixel"] = 0;
+     Window["8b"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+     Window["8b"]["Size"] = UDim2.new(0, 275, 0, 760);
+     Window["8b"]["Position"] = UDim2.new(0, 10, 0, 25);
+     Window["8b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+     Window["8b"]["Name"] = [[notificationholders]];
+     Window["8b"]["BackgroundTransparency"] = 1;
+ 
+     -- StarterGui.obeseui.notificationholders.UIListLayout
+     Window["8c"] = Instance.new("UIListLayout", Window["8b"]);
+     Window["8c"]["Padding"] = UDim.new(0, 5);
+     Window["8c"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+ 
+     function Window:Notify(Properties)
+         local Notification = {
+             Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'Notification',
+             Duration = Properties.duration or Properties.duration or 5
+         }
+         -- StarterGui.obeseui.notificationholders.notification
+         Notification["8d"] = Instance.new("Frame", Window["8b"]);
+         Notification["8d"]["BorderSizePixel"] = 0;
+         Notification["8d"]["BackgroundColor3"] = Color3.fromRGB(19, 19, 19);
+         Notification["8d"]["AutomaticSize"] = Enum.AutomaticSize.XY;
+         Notification["8d"]["Size"] = UDim2.new(0, 25, 0, 21);
+         Notification["8d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+         Notification["8d"]["Name"] = [[fffsafsadsadwdas]];
+         Notification["8d"].BackgroundTransparency = 1
+         Notification["8d"].Visible = false
+ 
+         -- StarterGui.obeseui.notificationholders.notification.UICorner
+         Notification["8e"] = Instance.new("UICorner", Notification["8d"]);
+         Notification["8e"]["CornerRadius"] = UDim.new(0.01, 5);
+ 
+         -- StarterGui.obeseui.notificationholders.notification.indicator
+         Notification["8f"] = Instance.new("Frame", Notification["8d"]);
+         Notification["8f"]["BorderSizePixel"] = 0;
+         Notification["8f"]["BackgroundColor3"] = Library.Accent;
+         Notification["8f"]["AnchorPoint"] = Vector2.new(0, 0.5);
+         Notification["8f"]["Size"] = UDim2.new(0, 4, 0, 14);
+         Notification["8f"]["Position"] = UDim2.new(0, 5, 0.5, 0);
+         Notification["8f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+         Notification["8f"]["Name"] = [[indicator]];
+         Notification["8f"].Visible = false
+         Notification["8f"].BackgroundTransparency = 1
+ 
+         -- StarterGui.obeseui.notificationholders.notification.indicator.UICorner
+         Notification["90"] = Instance.new("UICorner", Notification["8f"]);
+ 
+ 
+         -- StarterGui.obeseui.notificationholders.notification.text
+         Notification["91"] = Instance.new("TextLabel", Notification["8d"]);
+         Notification["91"]["TextWrapped"] = true;
+         Notification["91"]["TextStrokeTransparency"] = 0;
+         Notification["91"].Visible = false
+         Notification["91"]["BorderSizePixel"] = 0;
+         Notification["91"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+         Notification["91"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+         Notification["91"]["TextSize"] = 14;
+         Notification["91"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+         Notification["91"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+         Notification["91"]["BackgroundTransparency"] = 1;
+         Notification["91"]["Size"] = UDim2.new(1, 0, 1, 0);
+         Notification["91"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+         Notification["91"]["Text"] = Notification.Name;
+         Notification["91"]["AutomaticSize"] = Enum.AutomaticSize.X;
+         Notification["91"]["Name"] = [[notiitext]];
+         Notification["91"]["Position"] = UDim2.new(0, 15, 0, 0);
+         Notification["91"].TextTransparency = 1
+ 
+             Notification["8d"].Visible = true
+             Notification["8f"].Visible = true
+             Notification["91"].Visible = true
+             TweenService:Create(Notification["8d"], tweenInfo, {BackgroundTransparency = 0}):Play()
+             TweenService:Create(Notification["8f"], tweenInfo, {BackgroundTransparency = 0}):Play()
+             TweenService:Create(Notification["91"], tweenInfo, {TextTransparency = 0}):Play()
+ 
+             task.delay(Notification.Duration, function()
+                 TweenService:Create(Notification["8d"], tweenInfo, {BackgroundTransparency = 1}):Play()
+                 TweenService:Create(Notification["8f"], tweenInfo, {BackgroundTransparency = 1}):Play()
+                 TweenService:Create(Notification["91"], tweenInfo, {TextTransparency = 1}):Play()
+                 task.wait(0.1)
+                 Notification["8d"]:Destroy()
+             end)
+     end
+
+	function Window:Tab(Properties)
+		local Tab = {
+			Hovered = false,
+			Active = false,
+            Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'tab'
+		}
+
+		-- StarterGui.obeseui.main.tabs.holder.inactive
+		Tab["1a"] = Instance.new("TextButton", Window["10"]);
+		Tab["1a"]["TextStrokeTransparency"] = 0;
+		Tab["1a"]["BorderSizePixel"] = 0;
+		Tab["1a"]["AutoButtonColor"] = false;
+		Tab["1a"]["TextSize"] = 14;
+		Tab["1a"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+		Tab["1a"]["BackgroundColor3"] = Color3.fromRGB(40, 40, 40);
+		Tab["1a"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+		Tab["1a"]["Size"] = UDim2.new(0.8, 0, 0.055, 0);
+		Tab["1a"]["BackgroundTransparency"] = 1;
+		Tab["1a"]["Name"] = [[inactive]];
+		Tab["1a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+		Tab["1a"]["Text"] = Properties.Name or 'tab';
+
+		-- StarterGui.obeseui.main.tabs.holder.inactive.UIGradient
+		Tab["1b"] = Instance.new("UIGradient", Tab["1a"]);
+		Tab["1b"]["Rotation"] = 90;
+		Tab["1b"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(162, 162, 162))};
+
+		-- StarterGui.obeseui.main.tabs.holder.inactive.UICorner
+		Tab["1c"] = Instance.new("UICorner", Tab["1a"]);
+		Tab["1c"]["CornerRadius"] = UDim.new(0.01, 5);
+
+		-- StarterGui.obeseui.main.tabs.holder.inactive.UIStroke
+		Tab["1d"] = Instance.new("UIStroke", Tab["1a"]);
+		Tab["1d"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+		Tab["1d"]["Color"] = Color3.fromRGB(55, 55, 55);
+
+		-- StarterGui.obeseui.main.tabs.holder.inactive.indicator
+		Tab["1e"] = Instance.new("Frame", Tab["1a"]);
+		Tab["1e"]["Active"] = true;
+		Tab["1e"]["BorderSizePixel"] = 0;
+		Tab["1e"]["BackgroundColor3"] = Color3.fromRGB(59, 59, 59);
+		Tab["1e"]["AnchorPoint"] = Vector2.new(0, 0.5);
+		Tab["1e"]["Size"] = UDim2.new(0.03, 0, 0.6, 0);
+		Tab["1e"]["Position"] = UDim2.new(0, 5, 0.5, 0);
+		Tab["1e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+		Tab["1e"]["Name"] = [[indicator]];
+
+		-- StarterGui.obeseui.main.tabs.holder.inactive.indicator.UIGradient
+		Tab["1f"] = Instance.new("UIGradient", Tab["1e"]);
+		Tab["1f"]["Rotation"] = 90;
+		Tab["1f"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(162, 162, 162))};
+
+		-- StarterGui.obeseui.main.tabs.holder.inactive.indicator.UICorner
+		Tab["20"] = Instance.new("UICorner", Tab["1e"]);
+		Tab["20"]["CornerRadius"] = UDim.new(0.01, 5);
+
+		-- StarterGui.obeseui.main.contentcontainer.tab
+		Tab["25"] = Instance.new("Frame", Window["21"]);
+		Tab["25"]["BorderSizePixel"] = 0;
+		Tab["25"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+		Tab["25"]["Size"] = UDim2.new(1, 0, 1, 0);
+		Tab["25"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+		Tab["25"]["Name"] ="tab";
+		Tab["25"]["BackgroundTransparency"] = 1;
+		Tab["25"].Visible = false
+
+        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders
+        Tab["26"] = Instance.new("ScrollingFrame", Tab["25"]);
+        Tab["26"]["BorderSizePixel"] = 0;
+        Tab["26"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+        Tab["26"]["Size"] = UDim2.new(1, 0, 1, 0);
+        Tab["26"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+        Tab["26"]["Name"] = [[sectionholders]];
+        Tab["26"]["BackgroundTransparency"] = 1;
+        Tab["26"].ClipsDescendants = true
+        Tab["26"].ScrollBarThickness = 0
+        Tab["26"].CanvasSize = UDim2.new(0,0,5,0)
+
+        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left
+        Tab["27"] = Instance.new("Frame", Tab["26"]);
+        Tab["27"]["BorderSizePixel"] = 0;
+        Tab["27"]["BackgroundColor3"] = Color3.fromRGB(23, 23, 23);
+        Tab["27"]["Size"] = UDim2.new(0.46, 0, 0.95, 1);
+        Tab["27"]["Position"] = UDim2.new(0, 10, 0, 12);
+        Tab["27"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+        Tab["27"]["Name"] = [[left]];
+        Tab["27"]["BackgroundTransparency"] = 1;
+
+        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.UIListLayout
+        Tab["8c"] = Instance.new("UIListLayout", Tab["27"]);
+        Tab["8c"]["HorizontalAlignment"] = Enum.HorizontalAlignment.Center;
+        Tab["8c"]["Padding"] = UDim.new(0, 10);
+        Tab["8c"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+
+        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right
+        Tab["8d"] = Instance.new("Frame", Tab["26"]);
+        Tab["8d"]["BorderSizePixel"] = 0;
+        Tab["8d"]["BackgroundColor3"] = Color3.fromRGB(23, 23, 23);
+        Tab["8d"]["AnchorPoint"] = Vector2.new(1, 0);
+        Tab["8d"]["Size"] = UDim2.new(0.46, 0, 0.95, 1);
+        Tab["8d"]["Position"] = UDim2.new(1, -10, 0, 12);
+        Tab["8d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+        Tab["8d"]["Name"] = [[right]];
+        Tab["8d"]["BackgroundTransparency"] = 1;
+
+        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.UIListLayout
+        Tab["8e"] = Instance.new("UIListLayout", Tab["8d"]);
+        Tab["8e"]["HorizontalAlignment"] = Enum.HorizontalAlignment.Center;
+        Tab["8e"]["Padding"] = UDim.new(0, 10);
+        Tab["8e"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+
+		--// Functions
+
+		-- Hover Effects
+		Tab["1a"].MouseEnter:Connect(function()
+			Tab.Hovered = true
+			TweenService:Create(Tab["1a"], tweenInfo, {TextColor3 = Library.Accent;}):Play()
+		end)
+
+		Tab["1a"].MouseLeave:Connect(function()
+			Tab.Hovered = false
+			if not Tab.Active then
+				TweenService:Create(Tab["1a"], tweenInfo, {TextColor3 = Color3.fromRGB(255,255,255);}):Play()
+			end
+		end)
+
+		-- Tab switching
+		function Tab:Switch(bool)
+			Tab.Active = bool
+			TweenService:Create(Tab["1a"], tweenInfo, {TextColor3 = Color3.fromRGB(255,255,255)}):Play()
+			Tab["25"].Visible = bool
+			if bool then
+				TweenService:Create(Tab["1e"], tweenInfo, {BackgroundColor3 = Library.Accent;}):Play()
+                TweenService:Create(Tab["1a"], tweenInfo, {TextColor3 = Library.Accent;}):Play()
+			elseif not Tab.Hovered then
+				TweenService:Create(Tab["1e"], tweenInfo, {BackgroundColor3 = Library.TabInactiveColor;}):Play()
+                TweenService:Create(Tab["1a"], tweenInfo, {TextColor3 = Color3.fromRGB(255,255,255);}):Play()
+			end
+		end
+
+
+        -- Switch the tab when the button is clicked
+		Tab["1a"].MouseButton1Down:Connect(function()
+			for _, v in pairs(Library.Tabs) do
+				v:Switch(v == Tab)
+			end
+        end) 
+
+        function Tab:Section(Properties)
+            local Section = {
+                Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'section',
+                Side = Properties.Side or Properties.side or 'left'
+            }
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section
+            Section["28"] = Instance.new("Frame", Tab["27"]);
+            Section["28"]["BorderSizePixel"] = 0;
+            Section["28"]["BackgroundColor3"] = Color3.fromRGB(9, 9, 9);
+            Section["28"]["AutomaticSize"] = Enum.AutomaticSize.Y;
+            Section["28"]["Size"] = UDim2.new(1, 0, 0, 25);
+            Section["28"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            Section["28"]["Name"] = [[section]];
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.UIStroke
+            Section["29"] = Instance.new("UIStroke", Section["28"]);
+            Section["29"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.UIGradient
+            Section["2a"] = Instance.new("UIGradient", Section["28"]);
+            Section["2a"]["Rotation"] = 90;
+            Section["2a"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.UICorner
+            Section["2b"] = Instance.new("UICorner", Section["28"]);
+            Section["2b"]["CornerRadius"] = UDim.new(0.01, 5);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.name
+            Section["2c"] = Instance.new("TextLabel", Section["28"]);
+            Section["2c"]["TextStrokeTransparency"] = 0;
+            Section["2c"]["BorderSizePixel"] = 0;
+            Section["2c"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+            Section["2c"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+            Section["2c"]["TextSize"] = 14;
+            Section["2c"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            Section["2c"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+            Section["2c"]["BackgroundTransparency"] = 1;
+            Section["2c"]["Size"] = UDim2.new(0.5, 0, 0, 10);
+            Section["2c"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            Section["2c"]["Text"] = Section.Name;
+            Section["2c"]["Name"] = [[name]];
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.name.UIPadding
+            Section["2d"] = Instance.new("UIPadding", Section["2c"]);
+            Section["2d"]["PaddingLeft"] = UDim.new(0, 10);
+            Section["2d"]["PaddingBottom"] = UDim.new(0, 9);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content
+            Section["2e"] = Instance.new("Frame", Section["28"]);
+            Section["2e"]["BorderSizePixel"] = 0;
+            Section["2e"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+            Section["2e"]["Size"] = UDim2.new(0.05, 0, 1, 0);
+            Section["2e"]["Position"] = UDim2.new(0, 8, 0, 15);
+            Section["2e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            Section["2e"]["Name"] = [[content]];
+            Section["2e"]["BackgroundTransparency"] = 1;
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.UIListLayout
+            Section["2f"] = Instance.new("UIListLayout", Section["2e"]);
+            Section["2f"]["Padding"] = UDim.new(0, 8);
+            Section["2f"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+
+            if Section.Side == "left" or Section.Side == "Left" then 
+                Section["28"].Parent = Tab["27"];
+            elseif Section.Side == "right" or Section.Side == "Right" then 
+                Section["28"].Parent = Tab["8d"];
+            end
+
+            function Section:Toggle(Properties)
+                local Toggle = {
+                    Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'toggle',
+                    State = Properties.Default or Properties.default or Properties.State or Properties.state or false,
+                    Callback = Properties.Callback or function() end
+                }
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.toggle
+                Toggle["30"] = Instance.new("TextButton", Section["2e"]);
+                Toggle["30"]["BorderSizePixel"] = 0;
+                Toggle["30"]["AutoButtonColor"] = false;
+                Toggle["30"]["TextSize"] = 14;
+                Toggle["30"]["TextColor3"] = Color3.fromRGB(0, 0, 0);
+                Toggle["30"]["BackgroundColor3"] = Color3.fromRGB(44, 44, 44);
+                Toggle["30"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Toggle["30"]["Size"] = UDim2.new(0, 14, 0, 14);
+                Toggle["30"]["Name"] = [[toggle]];
+                Toggle["30"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Toggle["30"]["Text"] = [[]];
+                Toggle["30"].ZIndex = -31853
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.toggle.UIGradient
+                Toggle["31"] = Instance.new("UIGradient", Toggle["30"]);
+                Toggle["31"]["Rotation"] = 90;
+                Toggle["31"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.toggle.UIStroke
+                Toggle["32"] = Instance.new("UIStroke", Toggle["30"]);
+                Toggle["32"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Toggle["32"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.toggle.UICorner
+                Toggle["33"] = Instance.new("UICorner", Toggle["30"]);
+                Toggle["33"]["CornerRadius"] = UDim.new(0, 2);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.toggle.name
+                Toggle["34"] = Instance.new("TextLabel", Toggle["30"]);
+                Toggle["34"]["TextStrokeTransparency"] = 0;
+                Toggle["34"]["BorderSizePixel"] = 0;
+                Toggle["34"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+                Toggle["34"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Toggle["34"]["TextSize"] = 14;
+                Toggle["34"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Toggle["34"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Toggle["34"]["BackgroundTransparency"] = 1;
+                Toggle["34"]["AnchorPoint"] = Vector2.new(0, 0.5);
+                Toggle["34"]["Size"] = UDim2.new(0.5, 0, 0, 10);
+                Toggle["34"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Toggle["34"]["Text"] = Toggle.Name;
+                Toggle["34"]["Name"] = [[name]];
+                Toggle["34"]["Position"] = UDim2.new(0, 19, 0.5, 0);
+
+                function Toggle:set(v)
+					if v ==  nil then 
+						Toggle.State = not Toggle.State
+					else
+						Toggle.State = v 
+					end
+
+					if Toggle.State then 
+						TweenService:Create(Toggle["30"], tweenInfo, {BackgroundColor3 = Library.Accent}):Play()
+                        TweenService:Create(Toggle["32"], tweenInfo, {Color = Color3.fromRGB(41,41,41);}):Play()
+					else
+						TweenService:Create(Toggle["30"], tweenInfo, {BackgroundColor3 = Color3.fromRGB(44,44,44)}):Play()
+                        TweenService:Create(Toggle["32"], tweenInfo, {Color = Color3.fromRGB(41,41,41);}):Play()
+					end
+
+					Toggle.Callback(Toggle.State)
+				end
+
+                Toggle["30"].MouseEnter:Connect(function()
+                    Toggle.Hover = true
+                    TweenService:Create(Toggle["32"], tweenInfo, {Color = Library.Accent;}):Play()
+                end)
+        
+                Toggle["30"].MouseLeave:Connect(function()
+                    Toggle.Hover = false
+                        TweenService:Create(Toggle["32"], tweenInfo, {Color = Color3.fromRGB(41,41,41);}):Play()
+                end)
+                
+				Toggle["30"].MouseButton1Click:Connect(function()
+					Toggle:set()
+				end)
+
+                Toggle:set(Toggle.State)
+                
+
+
+                return Toggle
+            end
+
+            function Section:Button(Properties)
+                local Button = {
+                    Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'button',
+                    Callback = Properties.Callback or function() end
+                }
+                
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.button
+                Button["3a"] = Instance.new("TextButton", Section["2e"]);
+                Button["3a"]["TextStrokeTransparency"] = 0;
+                Button["3a"]["BorderSizePixel"] = 0;
+                Button["3a"]["AutoButtonColor"] = false;
+                Button["3a"]["TextSize"] = 14;
+                Button["3a"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Button["3a"]["BackgroundColor3"] = Color3.fromRGB(50, 50, 50);
+                Button["3a"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Button["3a"]["Size"] = UDim2.new(0, 160, 0, 14);
+                Button["3a"]["Name"] = [[button]];
+                Button["3a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.button.UIGradient
+                Button["3b"] = Instance.new("UIGradient", Button["3a"]);
+                Button["3b"]["Rotation"] = 90;
+                Button["3b"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.button.UIStroke
+                Button["3c"] = Instance.new("UIStroke", Button["3a"]);
+                Button["3c"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Button["3c"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.button.UICorner
+                Button["3d"] = Instance.new("UICorner", Button["3a"]);
+                Button["3d"]["CornerRadius"] = UDim.new(0, 2);
+
+                Button["3a"].MouseButton1Click:Connect(function()
+                    Button.Callback()
+                    TweenService:Create(Button["3c"], tweenInfo, {Color = Library.Accent;}):Play()
+                    task.wait(0.1)
+                    TweenService:Create(Button["3c"], tweenInfo, {Color = Color3.fromRGB(43, 43, 43)}):Play()
+                end)
+
+                return Button
+            end
+
+            function Section:Slider(Properties)
+                local Slider = {
+                    Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'slider',
+                    Min = Properties.Min or '1',
+                    Max = Properties.Max or '100',
+                    State = Properties.Default or Properties.default or Properties.State or Properties.state or '50',
+                    Decimals = Properties.Decimals or '1',
+                    Callback = Properties.Callback or function() end,
+                    Hover = false,
+                    connection = nil
+                }
+
+                
+                local TextValue = ("[value]")
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider
+                Slider["3e"] = Instance.new("Frame", Section["2e"]);
+                Slider["3e"]["BorderSizePixel"] = 0;
+                Slider["3e"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Slider["3e"]["Size"] = UDim2.new(0, 160, 0, 25);
+                Slider["3e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Slider["3e"]["Name"] = [[slider]];
+                Slider["3e"]["BackgroundTransparency"] = 1;
+                Slider["3e"].ZIndex = -31593
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider
+                Slider["3f"] = Instance.new("Frame", Slider["3e"]);
+                Slider["3f"]["BorderSizePixel"] = 0;
+                Slider["3f"]["BackgroundColor3"] = Color3.fromRGB(34, 34, 34);
+                Slider["3f"]["AnchorPoint"] = Vector2.new(0, 1);
+                Slider["3f"]["Size"] = UDim2.new(0, 160, 0, 7);
+                Slider["3f"]["Position"] = UDim2.new(0, 0, 1, 0);
+                Slider["3f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Slider["3f"]["Name"] = [[realslider]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.UICorner
+                Slider["40"] = Instance.new("UICorner", Slider["3f"]);
+                Slider["40"]["CornerRadius"] = UDim.new(0, 2);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.UIGradient
+                Slider["41"] = Instance.new("UIGradient", Slider["3f"]);
+                Slider["41"]["Rotation"] = 90;
+                Slider["41"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.UIStroke
+                Slider["42"] = Instance.new("UIStroke", Slider["3f"]);
+                Slider["42"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Slider["42"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.name
+                Slider["43"] = Instance.new("TextLabel", Slider["3f"]);
+                Slider["43"]["TextStrokeTransparency"] = 0;
+                Slider["43"]["BorderSizePixel"] = 0;
+                Slider["43"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+                Slider["43"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Slider["43"]["TextSize"] = 14;
+                Slider["43"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Slider["43"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Slider["43"]["BackgroundTransparency"] = 1;
+                Slider["43"]["Size"] = UDim2.new(1, 0, 0, 10);
+                Slider["43"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Slider["43"]["Text"] = Slider.Name;
+                Slider["43"]["Name"] = [[name]];
+                Slider["43"]["Position"] = UDim2.new(0, 0, 0, -15);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.value
+                Slider["44"] = Instance.new("TextLabel", Slider["3f"]);
+                Slider["44"]["TextStrokeTransparency"] = 0;
+                Slider["44"]["BorderSizePixel"] = 0;
+                Slider["44"]["TextXAlignment"] = Enum.TextXAlignment.Right;
+                Slider["44"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Slider["44"]["TextSize"] = 14;
+                Slider["44"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Slider["44"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Slider["44"]["BackgroundTransparency"] = 1;
+                Slider["44"]["Size"] = UDim2.new(1, 0, 0, 10);
+                Slider["44"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Slider["44"]["Text"] = [[50]];
+                Slider["44"]["Name"] = [[value]];
+                Slider["44"]["Position"] = UDim2.new(0, 0, 0, -15);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.indicator
+                Slider["45"] = Instance.new("Frame", Slider["3f"]);
+                Slider["45"]["BorderSizePixel"] = 0;
+                Slider["45"]["BackgroundColor3"] = Library.Accent;
+                Slider["45"]["Size"] = UDim2.new(0.5, 0, 1, 0);
+                Slider["45"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Slider["45"]["Name"] = [[indicator]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.indicator.UIStroke
+                Slider["46"] = Instance.new("UIStroke", Slider["45"]);
+                Slider["46"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Slider["46"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.indicator.UIGradient
+                Slider["47"] = Instance.new("UIGradient", Slider["45"]);
+                Slider["47"]["Rotation"] = 90;
+                Slider["47"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.slider.realslider.indicator.UICorner
+                Slider["48"] = Instance.new("UICorner", Slider["45"]);
+                Slider["48"]["CornerRadius"] = UDim.new(0, 2);
+
+				local function Set(value)
+					value = math.clamp(Library:Round(value, Slider.Decimals), Slider.Min, Slider.Max)
+
+					local sizeX = ((value - Slider.Min) / (Slider.Max - Slider.Min))
+					TweenService:Create(Slider["45"], TweenInfo.new(0.025, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {Size = UDim2.new(sizeX,0,1,0)}):Play()
+					Slider["44"].Text = TextValue:gsub("%[value%]", string.format("%.14g", value))
+
+					Slider.Callback(value)
+				end
+
+				local function Slide()
+					local sizeX = (Mouse.X - Slider["3f"].AbsolutePosition.X) / Slider["3f"].AbsoluteSize.X
+					local value = ((Slider.Max - Slider.Min) * sizeX) + Slider.Min
+					Set(value)
+				end
+
+				Slider["3f"].MouseEnter:Connect(function()
+					Slider.Hover = true 
+				end)
+
+				Slider["3f"].MouseLeave:Connect(function()
+					Slider.Hover = false 
+				end)
+
+				UserInputService.InputBegan:Connect(function(input, gpe)
+					if gpe then return end
+
+					if input.UserInputType == Enum.UserInputType.MouseButton1 and Slider.Hover then 
+
+						if not Slider.connection then 
+							Slider.connection = RunService.RenderStepped:Connect(function()
+								Library.Dragging = nil -- dont remove this, if you do the gui will drag itself while youre dragging the slider.
+								Slide()
+							end)
+						end
+					end
+				end)
+
+				UserInputService.InputEnded:Connect(function(input, gpe)
+					if gpe then return end
+
+					if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+						if Slider.connection then 
+							Slider.connection:Disconnect()
+							Slider.connection = nil
+						end
+					end
+				end)
+
+                function Slider:Set(Value)
+                    Set(Value)
+                end
+
+                Set(Slider.State)
+
+                return Slider
+            end
+
+            function Section:Dropdown(Properties)
+                local Dropdown = {
+                    Open = false,
+                    Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'dropdown',
+                    Options = Properties.options or Properties.Options or Properties.values or Properties.Values or {"1","2","3"},
+                    Max = Properties.MaxChoose or Properties.Max or nil,
+                    State = Properties.state or Properties.State or Properties.default or Properties.Default or nil,
+                    
+                    Callback = Properties.callback or Properties.Callback or function() end,
+                    OptionInsts = {},
+                }
+                
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown
+                Dropdown["4d"] = Instance.new("Frame", Section["2e"]);
+                Dropdown["4d"]["BorderSizePixel"] = 0;
+                Dropdown["4d"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Dropdown["4d"]["Size"] = UDim2.new(0, 160, 0, 35);
+                Dropdown["4d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["4d"]["Name"] = [[dropdown]];
+                Dropdown["4d"]["BackgroundTransparency"] = 1;
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown
+                Dropdown["4e"] = Instance.new("Frame", Dropdown["4d"]);
+                Dropdown["4e"]["BorderSizePixel"] = 0;
+                Dropdown["4e"]["BackgroundColor3"] = Color3.fromRGB(34, 34, 34);
+                Dropdown["4e"]["AnchorPoint"] = Vector2.new(0, 1);
+                Dropdown["4e"]["Size"] = UDim2.new(0, 160, 0, 15);
+                Dropdown["4e"]["Position"] = UDim2.new(0, 0, 1, 0);
+                Dropdown["4e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["4e"]["Name"] = [[realdropdown]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.UICorner
+                Dropdown["4f"] = Instance.new("UICorner", Dropdown["4e"]);
+                Dropdown["4f"]["CornerRadius"] = UDim.new(0, 2);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.UIGradient
+                Dropdown["50"] = Instance.new("UIGradient", Dropdown["4e"]);
+                Dropdown["50"]["Rotation"] = 90;
+                Dropdown["50"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.UIStroke
+                Dropdown["51"] = Instance.new("UIStroke", Dropdown["4e"]);
+                Dropdown["51"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Dropdown["51"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.name
+                Dropdown["52"] = Instance.new("TextLabel", Dropdown["4e"]);
+                Dropdown["52"]["TextStrokeTransparency"] = 0;
+                Dropdown["52"]["BorderSizePixel"] = 0;
+                Dropdown["52"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+                Dropdown["52"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Dropdown["52"]["TextSize"] = 14;
+                Dropdown["52"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Dropdown["52"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Dropdown["52"]["BackgroundTransparency"] = 1;
+                Dropdown["52"]["Size"] = UDim2.new(1, 0, 0, 10);
+                Dropdown["52"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["52"]["Text"] = Dropdown.Name;
+                Dropdown["52"]["Name"] = [[name]];
+                Dropdown["52"]["Position"] = UDim2.new(0, 0, 0, -15);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.value
+                Dropdown["53"] = Instance.new("TextLabel", Dropdown["4e"]);
+                Dropdown["53"]["TextStrokeTransparency"] = 0;
+                Dropdown["53"]["BorderSizePixel"] = 0;
+                Dropdown["53"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+                Dropdown["53"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Dropdown["53"]["TextSize"] = 14;
+                Dropdown["53"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Dropdown["53"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Dropdown["53"]["BackgroundTransparency"] = 1;
+                Dropdown["53"]["Size"] = UDim2.new(1, 0, 0, 10);
+                Dropdown["53"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["53"]["Text"] = [[Option]];
+                Dropdown["53"]["Name"] = [[value]];
+                Dropdown["53"]["Position"] = UDim2.new(0, 5, 0, 2);
+                Dropdown["53"].TextTruncate = Enum.TextTruncate.AtEnd
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.side
+                Dropdown["54"] = Instance.new("Frame", Dropdown["4e"]);
+                Dropdown["54"]["BorderSizePixel"] = 0;
+                Dropdown["54"]["BackgroundColor3"] = Library.Accent;
+                Dropdown["54"]["AnchorPoint"] = Vector2.new(1, 0);
+                Dropdown["54"]["Size"] = UDim2.new(0, 15, 0, 15);
+                Dropdown["54"]["Position"] = UDim2.new(1, 0, 0, 0);
+                Dropdown["54"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["54"]["Name"] = [[side]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.side.UIStroke
+                Dropdown["55"] = Instance.new("UIStroke", Dropdown["54"]);
+                Dropdown["55"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Dropdown["55"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.side.UIGradient
+                Dropdown["56"] = Instance.new("UIGradient", Dropdown["54"]);
+                Dropdown["56"]["Rotation"] = 90;
+                Dropdown["56"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.side.UICorner
+                Dropdown["57"] = Instance.new("UICorner", Dropdown["54"]);
+                Dropdown["57"]["CornerRadius"] = UDim.new(0, 2);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.side.img
+                Dropdown["58"] = Instance.new("ImageLabel", Dropdown["54"]);
+                Dropdown["58"]["BorderSizePixel"] = 0;
+                Dropdown["58"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Dropdown["58"]["Image"] = [[rbxassetid://18593145635]];
+                Dropdown["58"]["Size"] = UDim2.new(1, 0, 1, 0);
+                Dropdown["58"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["58"]["BackgroundTransparency"] = 1;
+                Dropdown["58"]["Name"] = [[img]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.side.TextButton
+                Dropdown["59"] = Instance.new("TextButton", Dropdown["54"]);
+                Dropdown["59"]["BorderSizePixel"] = 0;
+                Dropdown["59"]["TextSize"] = 14;
+                Dropdown["59"]["TextColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["59"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Dropdown["59"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Dropdown["59"]["Size"] = UDim2.new(1, 0, 1, 0);
+                Dropdown["59"]["BackgroundTransparency"] = 1;
+                Dropdown["59"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["59"]["Text"] = [[]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder
+                Dropdown["5a"] = Instance.new("Frame", Dropdown["4e"]);
+                Dropdown["5a"]["Visible"] = false;
+                Dropdown["5a"]["BorderSizePixel"] = 0;
+                Dropdown["5a"]["BackgroundColor3"] = Color3.fromRGB(32, 32, 32);
+                Dropdown["5a"]["AutomaticSize"] = Enum.AutomaticSize.Y;
+                Dropdown["5a"]["Size"] = UDim2.new(0, 150, 0, 20);
+                Dropdown["5a"]["Position"] = UDim2.new(0, 25, 0, 0);
+                Dropdown["5a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Dropdown["5a"]["Name"] = [[optionholder]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.UICorner
+                Dropdown["5b"] = Instance.new("UICorner", Dropdown["5a"]);
+                Dropdown["5b"]["CornerRadius"] = UDim.new(0, 2);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.UIStroke
+                Dropdown["5c"] = Instance.new("UIStroke", Dropdown["5a"]);
+                Dropdown["5c"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Dropdown["5c"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.UIGradient
+                Dropdown["5d"] = Instance.new("UIGradient", Dropdown["5a"]);
+                Dropdown["5d"]["Rotation"] = 90;
+                Dropdown["5d"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(180, 180, 180))};
+
+                Dropdown["11"] = Instance.new("UIListLayout", Dropdown["5a"]);
+                Dropdown["11"]["HorizontalAlignment"] = Enum.HorizontalAlignment.Left;
+                Dropdown["11"]["Padding"] = UDim.new(0, 0);
+                Dropdown["11"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+
+                Dropdown["59"].MouseButton1Click:Connect(function()
+                    if not Dropdown.Open then 
+                        Dropdown["5a"].Visible = true
+                        Dropdown.Open = true 
+                    elseif Dropdown.Open then 
+                        Dropdown["5a"].Visible = false
+                        Dropdown.Open = false 
+                    end
+                end)
+
+                UserInputService.InputBegan:Connect(function(inp,gpe)
+                    if gpe then return end
+
+                    if inp.UserInputType == Enum.UserInputType.MouseButton1 and not Library:IsMouseOverFrame(Dropdown["5a"]) then
+                        Dropdown["5a"].Visible = false
+                        Dropdown.Open = false
+                    end
+                end)
+
+
+
+                local chosen = Dropdown.Max and {} or nil
+                local Count = 0
+
+                local function CreateOptions(table)
+                    for _, option in next, table do
+                        Dropdown.OptionInsts[option] = {}
+                        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.Option1chosed
+                        local Option1Choosed = Instance.new("TextButton", Dropdown["5a"]);
+                        Option1Choosed["TextStrokeTransparency"] = 0;
+                        Option1Choosed["BorderSizePixel"] = 0;
+                        Option1Choosed["TextSize"] = 14;
+                        Option1Choosed["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                        Option1Choosed["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                        Option1Choosed["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                        Option1Choosed["Size"] = UDim2.new(1, 0, 0, 22);
+                        Option1Choosed["BackgroundTransparency"] = 1;
+                        Option1Choosed["Name"] = [[Option1chosed]];
+                        Option1Choosed["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                        Option1Choosed["Text"] = [[]];
+
+                        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.Option1chosed.Optionname
+                        local OptionName = Instance.new("TextLabel", Option1Choosed);
+                        OptionName["TextStrokeTransparency"] = 0;
+                        OptionName["TextTruncate"] = Enum.TextTruncate.AtEnd;
+                        OptionName["BorderSizePixel"] = 0;
+                        OptionName["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                        OptionName["TextSize"] = 14;
+                        OptionName["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                        OptionName["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                        OptionName["BackgroundTransparency"] = 1;
+                        OptionName["Size"] = UDim2.new(0, 70, 0, 22);
+                        OptionName["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                        OptionName["Name"] = [[Optionname]];    
+                        OptionName["Text"] = option
+                        OptionName.Position = UDim2.new(0,16,0,0)
+
+                        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.Option1chosed.Optionaccentname
+                        local OptionAccentName = Instance.new("TextLabel", Option1Choosed);
+                        OptionAccentName["TextStrokeTransparency"] = 0;
+                        OptionAccentName["TextTruncate"] = Enum.TextTruncate.AtEnd;
+                        OptionAccentName["BorderSizePixel"] = 0;
+                        OptionAccentName["TextTransparency"] = 1;
+                        OptionAccentName["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                        OptionAccentName["TextSize"] = 14;
+                        OptionAccentName["TextTransparency"] = 1
+                        OptionAccentName["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                        OptionAccentName["TextColor3"] = Library.Accent;
+                        OptionAccentName["BackgroundTransparency"] = 1;
+                        OptionAccentName["Size"] = UDim2.new(0, 70, 0, 22);
+                        OptionAccentName["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                        OptionAccentName["Name"] = [[Optionaccentname]];
+                        OptionAccentName.Text = option
+                        OptionAccentName.Position = UDim2.new(0,16,0,0)
+
+                        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.Option1chosed.OptionIndicator
+                        local OptionIndicator = Instance.new("Frame", Option1Choosed);
+                        OptionIndicator["BorderSizePixel"] = 0;
+                        OptionIndicator["BackgroundColor3"] = Color3.fromRGB(42, 43, 48);
+                        OptionIndicator["Size"] = UDim2.new(0, 4, 0, 14);
+                        OptionIndicator["Position"] = UDim2.new(0.05, 0, 0, 4);
+                        OptionIndicator["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                        OptionIndicator["Name"] = [[OptionIndicator]];
+
+                        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.Option1chosed.OptionIndicator.UICorner
+                        local CORNER1 = Instance.new("UICorner", OptionIndicator);
+
+                        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.Option1chosed.OptionAccentIndicator
+                        local OptionAccentIndicator = Instance.new("Frame", Option1Choosed);
+                        OptionAccentIndicator["BorderSizePixel"] = 0;
+                        OptionAccentIndicator["BackgroundColor3"] = Library.Accent;
+                        OptionAccentIndicator["Size"] = UDim2.new(0, 4, 0, 14);
+                        OptionAccentIndicator["Position"] = UDim2.new(0.05, 0, 0, 4);
+                        OptionAccentIndicator["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                        OptionAccentIndicator["Name"] = [[OptionAccentIndicator]];
+                        OptionAccentIndicator["BackgroundTransparency"] = 1;
+
+                        -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.dropdown.realdropdown.optionholder.Option1chosed.OptionAccentIndicator.UICorner
+                        local CORNER2 = Instance.new("UICorner", OptionAccentIndicator);
+
+                        Option1Choosed.Parent = Dropdown["5a"]
+                        Dropdown.OptionInsts[option].button = Option1Choosed
+                        Dropdown.OptionInsts[option].darktext = OptionName
+                        Dropdown.OptionInsts[option].text = OptionAccentName
+                        Dropdown.OptionInsts[option].accent = OptionAccentIndicator
+    
+                        Count = Count + 1
+    
+						Dropdown.OptionInsts[option].button.MouseButton1Down:Connect(function()
+							if Dropdown.Max then
+								if table.find(chosen, option) then
+									table.remove(chosen, table.find(chosen, option))
+		
+									local textchosen = {}
+									local cutobject = false
+		
+									for _, opt in next, chosen do
+										table.insert(textchosen, opt)
+									end
+									
+									Dropdown["53"].Text = #chosen == 0 and "None" or table.concat(textchosen, ",") .. (cutobject and ", ..." or "")
+		
+									TweenService:Create(Dropdown.OptionInsts[option].text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+									TweenService:Create(Dropdown.OptionInsts[option].darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+									TweenService:Create(Dropdown.OptionInsts[option].accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+		
+									Dropdown.Callback(chosen)
+								else
+									if #chosen == Dropdown.Max then
+										TweenService:Create(Dropdown.OptionInsts[chosen[1]].text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+										TweenService:Create(Dropdown.OptionInsts[chosen[1]].darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+										TweenService:Create(Dropdown.OptionInsts[chosen[1]].accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+										table.remove(chosen, 1)
+									end
+		
+									table.insert(chosen, option)
+		
+									local textchosen = {}
+									local cutobject = false
+		
+									for _, opt in next, chosen do
+										table.insert(textchosen, opt)
+									end
+									
+									Dropdown["53"].Text = #chosen == 0 and "None" or table.concat(textchosen, ",") .. (cutobject and ", ..." or "")
+		
+									TweenService:Create(Dropdown.OptionInsts[option].text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+									TweenService:Create(Dropdown.OptionInsts[option].darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+									TweenService:Create(Dropdown.OptionInsts[option].accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+		
+									Dropdown.Callback(chosen)
+								end
+							else
+								for opt, tbl in next, Dropdown.OptionInsts do
+									if opt ~= option then
+										TweenService:Create(tbl.text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+										TweenService:Create(tbl.darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+										TweenService:Create(tbl.accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+									end
+								end
+								chosen = option
+								Dropdown["53"].Text = chosen
+								TweenService:Create(Dropdown.OptionInsts[option].text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+								TweenService:Create(Dropdown.OptionInsts[option].darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+								TweenService:Create(Dropdown.OptionInsts[option].accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+								Dropdown.Callback(option)
+							end
+						end)
+                    end
+                end
+                --
+                CreateOptions(Dropdown.Options)
+                --
+                local Set = function(option)
+                    if Dropdown.Max then
+                        table.clear(chosen)
+                        option = type(option) == "table" and option or {}
+    
+                        for opt, tbl in next, Dropdown.OptionInsts do
+                            if not table.find(option, opt) then
+                                TweenService:Create(tbl.text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+                                TweenService:Create(tbl.darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+                                TweenService:Create(tbl.accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+                            end
+                        end
+    
+                        for i, opt in next, option do
+                            if table.find(Dropdown.Options, opt) and #chosen < Dropdown.Max then
+                                table.insert(chosen, opt)
+                                TweenService:Create(Dropdown.OptionInsts[opt].text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+                                TweenService:Create(Dropdown.OptionInsts[opt].darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+                                TweenService:Create(Dropdown.OptionInsts[opt].accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+                            end
+                        end
+    
+                        local textchosen = {}
+                        local cutobject = false
+    
+                        for _, opt in next, chosen do
+                            table.insert(textchosen, opt)
+                        end
+                        
+                        Dropdown["53"].Text = #chosen == 0 and "None" or table.concat(textchosen, ",") .. (cutobject and ", ..." or "")
+                        
+                        Dropdown.Callback(chosen)
+                    end
+                end
+                --
+                function Dropdown:Set(option)
+                    if Dropdown.Max then
+                        Set(option)
+                    else
+                        for opt, tbl in next, Dropdown.OptionInsts do
+                            if opt ~= option then
+                                TweenService:Create(tbl.text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+                                TweenService:Create(tbl.darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+                                TweenService:Create(tbl.accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+                            end
+                        end
+                        if table.find(Dropdown.Options, option) then
+                            chosen = option
+                            Dropdown["53"].Text = chosen
+                            TweenService:Create(Dropdown.OptionInsts[option].text, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+                            TweenService:Create(Dropdown.OptionInsts[option].darktext, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}):Play()
+                            TweenService:Create(Dropdown.OptionInsts[option].accent, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+                            Dropdown.Callback(chosen)
+                        else
+                            Dropdown["53"].Text = "None"
+                            chosen = nil
+                            Dropdown.Callback(chosen)
+                        end
+                    end
+                end
+    
+                function Dropdown:Refresh(tbl)
+                    for _, opt in next, Dropdown.OptionInsts do
+                        coroutine.wrap(function()
+                            opt.text:Destroy()
+                            opt.button:Destroy()
+                        end)()
+                    end
+                    table.clear(Dropdown.OptionInsts)
+    
+                    if Dropdown.Max then
+                        table.clear(chosen)
+                    else
+                        chosen = nil
+                    end
+    
+                    Dropdown.Callback(chosen)
+                end
+    
+                            
+                Dropdown:Set(Dropdown.State)
+                return Dropdown
+            end
+
+            function Section:Keybind(Properties)
+                local Keybind = {
+					Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'keybind',
+					State = (
+						Properties.state
+							or Properties.State
+							or Properties.def
+							or Properties.Def
+							or Properties.default
+							or Properties.Default
+							or nil
+					),
+					Mode = (Properties.mode or Properties.Mode or "Toggle"),
+					UseKey = (Properties.UseKey or false),
+					Ignore = (Properties.ignore or Properties.Ignore or false),
+					Callback = (
+						Properties.callback
+							or Properties.Callback
+							or Properties.callBack
+							or Properties.CallBack
+							or function() end
+					),
+					Binding = nil,
+                    Open = false,
+                    Hover = false,
+                    connection = nil
+				}
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind
+                Keybind["66"] = Instance.new("Frame", Section["2e"]);
+                Keybind["66"]["ZIndex"] = 431;
+                Keybind["66"]["BorderSizePixel"] = 0;
+                Keybind["66"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Keybind["66"]["Size"] = UDim2.new(0, 160, 0, 15);
+                Keybind["66"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Keybind["66"]["Name"] = [[keybind]];
+                Keybind["66"]["BackgroundTransparency"] = 1;
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.name
+                Keybind["67"] = Instance.new("TextLabel", Keybind["66"]);
+                Keybind["67"]["TextStrokeTransparency"] = 0;
+                Keybind["67"]["BorderSizePixel"] = 0;
+                Keybind["67"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+                Keybind["67"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Keybind["67"]["TextSize"] = 14;
+                Keybind["67"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Keybind["67"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Keybind["67"]["BackgroundTransparency"] = 1;
+                Keybind["67"]["AnchorPoint"] = Vector2.new(0, 1);
+                Keybind["67"]["Size"] = UDim2.new(1, 0, 0, 10);
+                Keybind["67"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Keybind["67"]["Text"] = Keybind.Name;
+                Keybind["67"]["Name"] = [[name]];
+                Keybind["67"]["Position"] = UDim2.new(0, 0, 1, 0);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.key
+                Keybind["68"] = Instance.new("TextButton", Keybind["66"]);
+                Keybind["68"]["Active"] = false;
+                Keybind["68"]["TextStrokeTransparency"] = 0;
+                Keybind["68"]["BorderSizePixel"] = 0;
+                Keybind["68"]["TextXAlignment"] = Enum.TextXAlignment.Right;
+                Keybind["68"]["TextSize"] = 14;
+                Keybind["68"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Keybind["68"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Keybind["68"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Keybind["68"]["Selectable"] = false;
+                Keybind["68"]["AnchorPoint"] = Vector2.new(1, 1);
+                Keybind["68"]["Size"] = UDim2.new(0.1, 0, 0, 10);
+                Keybind["68"]["BackgroundTransparency"] = 1;
+                Keybind["68"]["Name"] = [[key]];
+                Keybind["68"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Keybind["68"]["Text"] = [[None]];
+                Keybind["68"]["Position"] = UDim2.new(1, 0, 1, 0);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.window
+                Keybind["69"] = Instance.new("Frame", Keybind["66"]);
+                Keybind["69"]["Visible"] = false;
+                Keybind["69"]["BorderSizePixel"] = 0;
+                Keybind["69"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 31);
+                Keybind["69"]["Size"] = UDim2.new(0, 70, 0, 50);
+                Keybind["69"]["Position"] = UDim2.new(0, 120, 0, 25);
+                Keybind["69"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Keybind["69"]["Name"] = [[window]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.window.UIGradient
+                Keybind["6a"] = Instance.new("UIGradient", Keybind["69"]);
+                Keybind["6a"]["Rotation"] = 90;
+                Keybind["6a"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.window.UICorner
+                Keybind["6b"] = Instance.new("UICorner", Keybind["69"]);
+                Keybind["6b"]["CornerRadius"] = UDim.new(0.01, 5);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.window.UIStroke
+                Keybind["6c"] = Instance.new("UIStroke", Keybind["69"]);
+                Keybind["6c"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.window.toggle
+                Keybind["6d"] = Instance.new("TextButton", Keybind["69"]);
+                Keybind["6d"]["TextStrokeTransparency"] = 0;
+                Keybind["6d"]["BorderSizePixel"] = 0;
+                Keybind["6d"]["TextSize"] = 14;
+                Keybind["6d"]["TextColor3"] = Library.Accent
+                Keybind["6d"]["BackgroundColor3"] = Color3.fromRGB(255, 129, 140);
+                Keybind["6d"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Keybind["6d"]["Size"] = UDim2.new(1, 0, 0, 11);
+                Keybind["6d"]["BackgroundTransparency"] = 1;
+                Keybind["6d"]["Name"] = [[toggle]];
+                Keybind["6d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Keybind["6d"]["Text"] = [[Toggle]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.window.hold
+                Keybind["6e"] = Instance.new("TextButton", Keybind["69"]);
+                Keybind["6e"]["TextStrokeTransparency"] = 0;
+                Keybind["6e"]["BorderSizePixel"] = 0;
+                Keybind["6e"]["TextSize"] = 14;
+                Keybind["6e"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Keybind["6e"]["BackgroundColor3"] = Color3.fromRGB(255, 129, 140);
+                Keybind["6e"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Keybind["6e"]["Size"] = UDim2.new(1, 0, 0, 11);
+                Keybind["6e"]["BackgroundTransparency"] = 1;
+                Keybind["6e"]["Name"] = [[hold]];
+                Keybind["6e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Keybind["6e"]["Text"] = [[Hold]];
+                Keybind["6e"]["Position"] = UDim2.new(0, 0, 0, 15);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.keybind.window.always
+                Keybind["6f"] = Instance.new("TextButton", Keybind["69"]);
+                Keybind["6f"]["TextStrokeTransparency"] = 0;
+                Keybind["6f"]["BorderSizePixel"] = 0;
+                Keybind["6f"]["TextSize"] = 14;
+                Keybind["6f"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Keybind["6f"]["BackgroundColor3"] = Color3.fromRGB(255, 129, 140);
+                Keybind["6f"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Keybind["6f"]["Size"] = UDim2.new(1, 0, 0, 11);
+                Keybind["6f"]["BackgroundTransparency"] = 1;
+                Keybind["6f"]["Name"] = [[always]];
+                Keybind["6f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Keybind["6f"]["Text"] = [[Always]];
+                Keybind["6f"]["Position"] = UDim2.new(0, 0, 0, 30);
+
+                local function set(newkey)
+					if string.find(tostring(newkey), "Enum") then
+						if Keybind.c then
+							Keybind.c:Disconnect()
+							Keybind.Callback(false)
+						end
+						if tostring(newkey):find("Enum.KeyCode.") then
+							newkey = Enum.KeyCode[tostring(newkey):gsub("Enum.KeyCode.", "")]
+						elseif tostring(newkey):find("Enum.UserInputType.") then
+							newkey = Enum.UserInputType[tostring(newkey):gsub("Enum.UserInputType.", "")]
+						end
+						if newkey == Enum.KeyCode.Backspace then
+							Key = nil
+							if Keybind.UseKey then
+								Keybind.Callback(Key)
+							end
+							local text = "None"
+
+							Keybind["68"].Text = text
+						elseif newkey ~= nil then
+							Key = newkey
+							if Keybind.UseKey then
+								Keybind.Callback(Key)
+							end
+							local text = (Library.Keys[newkey] or tostring(newkey):gsub("Enum.KeyCode.", ""))
+
+							Keybind["68"].Text = text
+						end
+
+					elseif table.find({ "Always", "Toggle", "Hold" }, newkey) then
+						if not Keybind.UseKey then
+							Keybind.Mode = newkey
+							if Keybind.Mode == "Always" then
+								State = true
+								Keybind.Callback(true)
+							end
+						end
+					else
+						State = newkey
+						Keybind.Callback(newkey)
+					end
+				end
+
+                set(Keybind.State)
+				set(Keybind.Mode)
+
+                Keybind["68"].MouseButton1Click:Connect(function()
+					if not Keybind.Binding then
+
+						Keybind["68"].Text = ". . ."
+
+						Keybind.Binding =
+							game:GetService("UserInputService").InputBegan:Connect(function(input,gpe)
+								set(
+									input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode
+										or input.UserInputType
+								)
+								Library:Disconnect(Keybind.Binding)
+								task.wait()
+								Keybind.Binding = nil
+						end)
+					end
+				end)
+
+                UserInputService.InputBegan:Connect(function(inp,gpe)
+                    if gpe then return end 
+
+                    if (inp.KeyCode == Key or inp.UserInputType == Key) and not Keybind.Binding and not Keybind.UseKey then
+						if Keybind.Mode == "Hold" then
+							Keybind.c = game:GetService("RunService").RenderStepped:Connect(function()
+								if Keybind.Callback then
+									Keybind.Callback(true)
+								end
+							end)
+						elseif Keybind.Mode == "Toggle" then
+							State = not State
+							Keybind.Callback(State)
+						end
+					end
+                end)
+
+                UserInputService.InputEnded:Connect(function(inp,gpe)
+                    if Keybind.Mode == "Hold" and not Keybind.UseKey then
+						if Key ~= "" or Key ~= nil then
+							if inp.KeyCode == Key or inp.UserInputType == Key then
+								if Keybind.c then
+									Keybind.c:Disconnect()
+									if Keybind.Callback then
+										Keybind.Callback(false)
+									end
+								end
+							end
+						end
+					end
+                end)
+
+
+                Keybind["68"].MouseEnter:Connect(function()
+                    Keybind.Hover = true 
+                end)
+
+                Keybind["68"].MouseLeave:Connect(function()
+                    Keybind.Hover = false 
+                end)
+
+                Keybind["68"].InputBegan:Connect(function(inp,gpe)
+                    if gpe then return end 
+
+                    if not Keybind.Open and inp.UserInputType == Enum.UserInputType.MouseButton2 and Keybind.Hover then 
+                        Keybind["69"].Visible = true
+                        Keybind.Open = true
+                    elseif Keybind.Open and inp.UserInputType == Enum.UserInputType.MouseButton2  then 
+                        Keybind["69"].Visible = false
+                        Keybind.Open = false
+                    end
+                end)
+
+                UserInputService.InputBegan:Connect(function(inp,gpe)
+                    if gpe then return end 
+
+                    if inp.UserInputType == Enum.UserInputType.MouseButton1 and not Library:IsMouseOverFrame(Keybind["69"]) then 
+                        Keybind["69"].Visible = false 
+                    end
+                end)
+
+
+                Keybind["6d"].MouseButton1Down:Connect(function()
+                    set("Toggle")
+                    TweenService:Create(
+                        Keybind["6d"],
+                        tweenInfo,
+                        {TextColor3 = Library.Accent}
+                    ):Play()
+
+                    TweenService:Create(
+                        Keybind["6e"],
+                        tweenInfo,
+                        {TextColor3 = Color3.fromRGB(255,255,255)}
+                    ):Play()
+
+                    TweenService:Create(
+                        Keybind["6f"],
+                        tweenInfo,
+                        {TextColor3 = Color3.fromRGB(255,255,255)}
+                    ):Play()
+                end)
+
+                Keybind["6e"].MouseButton1Down:Connect(function()
+                    set("Hold")
+                    TweenService:Create(
+                        Keybind["6d"],
+                        tweenInfo,
+                        {TextColor3 = Color3.fromRGB(255,255,255)}
+                    ):Play()
+
+                    TweenService:Create(
+                        Keybind["6e"],
+                        tweenInfo,
+                        {TextColor3 = Library.Accent}
+                    ):Play()
+
+                    TweenService:Create(
+                        Keybind["6f"],
+                        tweenInfo,
+                        {TextColor3 = Color3.fromRGB(255,255,255)}
+                    ):Play()
+                end)
+
+                Keybind["6f"].MouseButton1Down:Connect(function()
+                    set("Always")
+                    TweenService:Create(
+                        Keybind["6d"],
+                        tweenInfo,
+                        {TextColor3 = Color3.fromRGB(255,255,255)}
+                    ):Play()
+
+                    TweenService:Create(
+                        Keybind["6e"],
+                        tweenInfo,
+                        {TextColor3 = Color3.fromRGB(255,255,255)}
+                    ):Play()
+
+                    TweenService:Create(
+                        Keybind["6f"],
+                        tweenInfo,
+                        {TextColor3 = Library.Accent}
+                    ):Play()
+                end)
+
+                return Keybind
+            end
+
+            function Section:Colorpicker(Properties)
+                local Colorpicker = {
+                    Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'colorpicker',
+                    Default = Properties.Default or Properties.default or Color3.fromRGB(255,0,0),
+                    Alpha = Properties.alpha or Properties.Alpha or 1,
+                    Callback = Properties.Callback or Properties.callback,
+                    Open = false
+                }
+                
+                Colorpicker["6f"] = Instance.new("Frame", Section["2e"]);
+                Colorpicker["6f"]["BorderSizePixel"] = 0;
+                Colorpicker["6f"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Colorpicker["6f"]["Size"] = UDim2.new(0, 160, 0, 14);
+                Colorpicker["6f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["6f"]["Name"] = [[colorpicker]];
+                Colorpicker["6f"]["BackgroundTransparency"] = 1;
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.color
+                Colorpicker["70"] = Instance.new("TextButton", Colorpicker["6f"]);
+                Colorpicker["70"]["BorderSizePixel"] = 0;
+                Colorpicker["70"]["AutoButtonColor"] = false;
+                Colorpicker["70"]["TextSize"] = 14;
+                Colorpicker["70"]["TextColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["70"]["BackgroundColor3"] = Color3.fromRGB(255, 0, 0);
+                Colorpicker["70"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Colorpicker["70"]["AnchorPoint"] = Vector2.new(1, 0.5);
+                Colorpicker["70"]["Size"] = UDim2.new(0, 16, 0, 11);
+                Colorpicker["70"]["Name"] = [[color]];
+                Colorpicker["70"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["70"]["Text"] = [[]];
+                Colorpicker["70"]["Position"] = UDim2.new(1, 0, 0.5, 0);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.color.UIGradient
+                Colorpicker["71"] = Instance.new("UIGradient", Colorpicker["70"]);
+                Colorpicker["71"]["Rotation"] = 90;
+                Colorpicker["71"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.color.UIStroke
+                Colorpicker["72"] = Instance.new("UIStroke", Colorpicker["70"]);
+                Colorpicker["72"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Colorpicker["72"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.color.UICorner
+                Colorpicker["73"] = Instance.new("UICorner", Colorpicker["70"]);
+                Colorpicker["73"]["CornerRadius"] = UDim.new(0, 2);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.name
+                Colorpicker["74"] = Instance.new("TextLabel", Colorpicker["6f"]);
+                Colorpicker["74"]["TextStrokeTransparency"] = 0;
+                Colorpicker["74"]["BorderSizePixel"] = 0;
+                Colorpicker["74"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+                Colorpicker["74"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Colorpicker["74"]["TextSize"] = 14;
+                Colorpicker["74"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Colorpicker["74"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Colorpicker["74"]["BackgroundTransparency"] = 1;
+                Colorpicker["74"]["AnchorPoint"] = Vector2.new(0, 0.5);
+                Colorpicker["74"]["Size"] = UDim2.new(0.5, 0, 0, 10);
+                Colorpicker["74"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["74"]["Text"] = Colorpicker.Name;
+                Colorpicker["74"]["Name"] = [[name]];
+                Colorpicker["74"]["Position"] = UDim2.new(0, 0, 0.5, 0);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window
+                Colorpicker["75"] = Instance.new("Frame", Colorpicker["6f"]);
+                Colorpicker["75"]["Visible"] = false;
+                Colorpicker["75"]["ZIndex"] = 14369461;
+                Colorpicker["75"]["BorderSizePixel"] = 0;
+                Colorpicker["75"]["BackgroundColor3"] = Color3.fromRGB(27, 27, 27);
+                Colorpicker["75"]["Size"] = UDim2.new(0, 150, 0, 120);
+                Colorpicker["75"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["75"]["Name"] = [[window]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.UIStroke
+                Colorpicker["76"] = Instance.new("UIStroke", Colorpicker["75"]);
+                Colorpicker["76"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.UIGradient
+                Colorpicker["77"] = Instance.new("UIGradient", Colorpicker["75"]);
+                Colorpicker["77"]["Rotation"] = 90;
+                Colorpicker["77"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.UICorner
+                Colorpicker["78"] = Instance.new("UICorner", Colorpicker["75"]);
+                Colorpicker["78"]["CornerRadius"] = UDim.new(0.01, 5);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.alpha
+                Colorpicker["79"] = Instance.new("ImageButton", Colorpicker["75"]);
+                Colorpicker["79"]["BorderSizePixel"] = 0;
+                Colorpicker["79"]["AutoButtonColor"] = false;
+                Colorpicker["79"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Colorpicker["79"]["AnchorPoint"] = Vector2.new(0, 1);
+                Colorpicker["79"]["Image"] = [[http://www.roblox.com/asset/?id=14684562507]];
+                Colorpicker["79"]["Size"] = UDim2.new(0, 120, 0, 11);
+                Colorpicker["79"]["BackgroundTransparency"] = 1;
+                Colorpicker["79"]["Name"] = [[alpha]];
+                Colorpicker["79"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["79"]["Position"] = UDim2.new(0, 5, 1, -5);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.alpha.UIStroke
+                Colorpicker["7a"] = Instance.new("UIStroke", Colorpicker["79"]);
+
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.hue
+                Colorpicker["7b"] = Instance.new("ImageButton", Colorpicker["75"]);
+                Colorpicker["7b"]["BorderSizePixel"] = 0;
+                Colorpicker["7b"]["AutoButtonColor"] = false;
+                Colorpicker["7b"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Colorpicker["7b"]["Image"] = [[http://www.roblox.com/asset/?id=14684557999]];
+                Colorpicker["7b"]["Size"] = UDim2.new(0, 11, 0, 85);
+                Colorpicker["7b"]["BackgroundTransparency"] = 1;
+                Colorpicker["7b"]["Name"] = [[hue]];
+                Colorpicker["7b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["7b"]["Position"] = UDim2.new(0, 130, 0, 15);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.hue.UIStroke
+                Colorpicker["7c"] = Instance.new("UIStroke", Colorpicker["7b"]);
+
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.color
+                Colorpicker["7d"] = Instance.new("TextButton", Colorpicker["75"]);
+                Colorpicker["7d"]["BorderSizePixel"] = 0;
+                Colorpicker["7d"]["AutoButtonColor"] = false;
+                Colorpicker["7d"]["TextSize"] = 14;
+                Colorpicker["7d"]["TextColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["7d"]["BackgroundColor3"] = Color3.fromRGB(255, 0, 0);
+                Colorpicker["7d"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Colorpicker["7d"]["Size"] = UDim2.new(0, 120, 0, 80);
+                Colorpicker["7d"]["Name"] = [[color]];
+                Colorpicker["7d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["7d"]["Text"] = [[]];
+                Colorpicker["7d"]["Position"] = UDim2.new(0, 5, 0, 15);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.color.sat
+                Colorpicker["7e"] = Instance.new("ImageLabel", Colorpicker["7d"]);
+                Colorpicker["7e"]["BorderSizePixel"] = 0;
+                Colorpicker["7e"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Colorpicker["7e"]["Image"] = [[http://www.roblox.com/asset/?id=14684562507]];
+                Colorpicker["7e"]["Size"] = UDim2.new(1, 0, 1, 0);
+                Colorpicker["7e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["7e"]["BackgroundTransparency"] = 1;
+                Colorpicker["7e"]["Name"] = [[sat]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.colorpicker.window.color.val
+                Colorpicker["7f"] = Instance.new("ImageLabel", Colorpicker["7d"]);
+                Colorpicker["7f"]["BorderSizePixel"] = 0;
+                Colorpicker["7f"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Colorpicker["7f"]["Image"] = [[http://www.roblox.com/asset/?id=14684563800]];
+                Colorpicker["7f"]["Size"] = UDim2.new(1, 0, 1, 0);
+                Colorpicker["7f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Colorpicker["7f"]["BackgroundTransparency"] = 1;
+                Colorpicker["7f"]["Name"] = [[val]];
+
+                Colorpicker["70"].MouseButton1Click:Connect(function()
+                    if not Colorpicker.Open then 
+                        Colorpicker["75"].Visible = true
+                        Colorpicker.Open = true
+                    elseif Colorpicker.Open then
+                        Colorpicker["75"].Visible = false
+                        Colorpicker.Open = false
+                    end
+                end)
+
+                UserInputService.InputBegan:Connect(function(inp,gpe)
+                    if gpe then return end 
+
+                    if inp.UserInputType == Enum.UserInputType.MouseButton1 and not Library:IsMouseOverFrame(Colorpicker["75"]) then 
+                        Colorpicker["75"].Visible = false 
+                    end
+                end)
+
+
+                local mouseover = false
+                local hue, sat, val = Colorpicker.Default:ToHSV()
+                local hsv = Colorpicker.Default:ToHSV()
+                local alpha = Colorpicker.Alpha
+                local oldcolor = hsv
+                local slidingsaturation = false
+                local slidinghue = false
+                local slidingalpha = false
+
+                local function update()
+                    local real_pos = UserInputService:GetMouseLocation()
+                    local mouse_position = Vector2.new(real_pos.X - 5, real_pos.Y - 30)
+                    local relative_palette = (mouse_position - Colorpicker["7d"].AbsolutePosition)
+                    local relative_hue     = (mouse_position - Colorpicker["7b"].AbsolutePosition)
+                    local relative_opacity = (mouse_position - Colorpicker["79"].AbsolutePosition)
+                    --
+                    if slidingsaturation then
+                        sat = math.clamp(1 - relative_palette.X / Colorpicker["7d"].AbsoluteSize.X, 0, 1)
+                        val = math.clamp(1 - relative_palette.Y / Colorpicker["7d"].AbsoluteSize.Y, 0, 1)
+                    elseif slidinghue then
+                        hue = math.clamp(relative_hue.Y / Colorpicker["7b"].AbsoluteSize.Y, 0, 1)
+                    elseif slidingalpha then
+                        alpha = math.clamp(relative_opacity.X / Colorpicker["79"].AbsoluteSize.X, 0, 1)
+                    end
+    
+                    hsv = Color3.fromHSV(hue, sat, val)
+                    --
+                    TweenService:Create(
+                        Colorpicker["7d"],
+                        TweenInfo.new(0.05, 
+                        Enum.EasingStyle.Quad,Enum.EasingDirection.InOut),
+                        {BackgroundColor3 = Color3.fromHSV(hue, 1, 1)}
+                    ):Play()
+                    --
+                    TweenService:Create(
+                        Colorpicker["70"],
+                        TweenInfo.new(0.05, Enum.EasingStyle.Quad,Enum.EasingDirection.InOut),
+                        {BackgroundColor3 = hsv}
+                    ):Play()
+    
+                    Colorpicker.Callback(Library:RGBA(hsv.r * 255, hsv.g * 255, hsv.b * 255, alpha))
+                end
+
+                local function set(color, a)
+                    if type(color) == "table" then
+                        a = color[4]
+                        color = Color3.fromHSV(color[1], color[2], color[3])
+                    end
+                    if type(color) == "string" then
+                        color = Color3.fromHex(color)
+                    end
+    
+                    local oldcolor = hsv
+                    local oldalpha = alpha
+    
+                    hue, sat, val = color:ToHSV()
+                    alpha = a or 1
+                    hsv = Color3.fromHSV(hue, sat, val)
+    
+                    if hsv ~= oldcolor then
+                        Colorpicker["5d"].BackgroundColor3.BackgroundColor3 = hsv
+                        Colorpicker["53"].BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+    
+    
+                        Colorpicker.Callback(Library:RGBA(hsv.R * 255, hsv.G * 255, hsv.B * 255, alpha))
+                    end
+                end
+
+
+                Colorpicker["7e"].InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        slidingsaturation = true
+                        update()
+                    end
+                end)
+    
+                Colorpicker["7e"].InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        slidingsaturation = false
+                        update()
+                    end
+                end)
+
+                Colorpicker["7b"].InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        slidinghue = true
+                        update()
+                    end
+                end)
+    
+                Colorpicker["7b"].InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        slidinghue = false
+                        update()
+                    end
+                end)
+
+                Colorpicker["79"].InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        slidingalpha = true
+                        update()
+                    end
+                end)
+    
+                Colorpicker["79"].InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        slidingalpha = false
+                        update()
+                    end
+                end)
+
+                UserInputService.InputChanged:Connect(function(input,gpe)
+                    if gpe then return end 
+
+                    if input.UserInputType == Enum.UserInputType.MouseMovement then
+                        if slidingalpha then
+                            update()
+                        end
+    
+                        if slidinghue then
+                            update()
+                        end
+    
+                        if slidingsaturation then
+                            update()
+                        end
+                    end
+                end)
+
+                return Colorpicker
+            end
+
+            function Section:Textbox(Properties)
+                local Textbox = {
+                    Name = Properties.Title or Properties.title or Properties.Name or Properties.name or Properties.Text or Properties.text or 'textbox',
+                    Placeholder = Properties.Placeholder or Properties.placeholder or '. . .',
+                    State = Properties.Default or Properties.default or 'Textbox',
+                    Callback = Properties.Callback or Properties.callback or function() end
+                }
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.textbox
+                Textbox["82"] = Instance.new("Frame", Section["2e"]);
+                Textbox["82"]["BorderSizePixel"] = 0;
+                Textbox["82"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Textbox["82"]["Size"] = UDim2.new(0, 160, 0, 35);
+                Textbox["82"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Textbox["82"]["Name"] = [[textbox]];
+                Textbox["82"]["BackgroundTransparency"] = 1;
+                Textbox["82"].ZIndex = -31549
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.textbox.textbox
+                Textbox["83"] = Instance.new("TextBox", Textbox["82"]);
+                Textbox["83"]["CursorPosition"] = -1;
+                Textbox["83"]["TextStrokeTransparency"] = 0;
+                Textbox["83"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Textbox["83"]["PlaceholderColor3"] = Color3.fromRGB(179, 179, 179);
+                Textbox["83"]["BorderSizePixel"] = 0;
+                Textbox["83"]["TextSize"] = 14;
+                Textbox["83"]["Name"] = [[textbox]];
+                Textbox["83"]["BackgroundColor3"] = Color3.fromRGB(35, 35, 35);
+                Textbox["83"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Textbox["83"]["AnchorPoint"] = Vector2.new(0, 1);
+                Textbox["83"]["PlaceholderText"] = Textbox.Placeholder;
+                Textbox["83"]["Size"] = UDim2.new(0, 160, 0, 14);
+                Textbox["83"]["Position"] = UDim2.new(0, 0, 1, 0);
+                Textbox["83"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Textbox["83"]["Text"] = [[]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.textbox.textbox.UIGradient
+                Textbox["84"] = Instance.new("UIGradient", Textbox["83"]);
+                Textbox["84"]["Rotation"] = 90;
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.textbox.textbox.UICorner
+                Textbox["85"] = Instance.new("UICorner", Textbox["83"]);
+                Textbox["85"]["CornerRadius"] = UDim.new(0, 2);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.textbox.textbox.UIStroke
+                Textbox["86"] = Instance.new("UIStroke", Textbox["83"]);
+                Textbox["86"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+                Textbox["86"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.textbox.textbox.name
+                Textbox["87"] = Instance.new("TextLabel", Textbox["83"]);
+                Textbox["87"]["TextStrokeTransparency"] = 0;
+                Textbox["87"]["BorderSizePixel"] = 0;
+                Textbox["87"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+                Textbox["87"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+                Textbox["87"]["TextSize"] = 14;
+                Textbox["87"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+                Textbox["87"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+                Textbox["87"]["BackgroundTransparency"] = 1;
+                Textbox["87"]["Size"] = UDim2.new(1, 0, 0, 10);
+                Textbox["87"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Textbox["87"]["Text"] = Textbox.Name;
+                Textbox["87"]["Name"] = [[name]];
+                Textbox["87"]["Position"] = UDim2.new(0, 0, 0, -15);
+
+                Textbox["83"].FocusLost:Connect(function()
+                    Textbox.Callback(Textbox["83"].Text)
+                end)
+
+                local function set(str)
+                    Textbox["83"].Text = str
+                    Textbox.Callback(str)
+                end
+
+                set(Textbox.State)
+
+                return Textbox
+            end
+
+            function Section:Divider()
+                local Divider = {}
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.divider
+                Divider["88"] = Instance.new("Frame", Section["2e"]);
+                Divider["88"]["BorderSizePixel"] = 0;
+                Divider["88"]["BackgroundColor3"] = Color3.fromRGB(9, 9, 9);
+                Divider["88"]["Size"] = UDim2.new(0, 160, 0, 6);
+                Divider["88"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+                Divider["88"]["Name"] = [[divider]];
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.divider.UIStroke
+                Divider["89"] = Instance.new("UIStroke", Divider["88"]);
+                Divider["89"]["Color"] = Color3.fromRGB(39, 39, 39);
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.divider.UIGradient
+                Divider["8a"] = Instance.new("UIGradient", Divider["88"]);
+                Divider["8a"]["Rotation"] = 90;
+                Divider["8a"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+                -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.left.section.content.divider.UICorner
+                Divider["8b"] = Instance.new("UICorner", Divider["88"]);
+                Divider["8b"]["CornerRadius"] = UDim.new(0, 2);
+
+                return divider
+            end
+
+            return Section
+        end
+
+        function Window:BuildSettingsTab()
+            local SettingsTab = Window:Tab({
+                Name = "Configuration"
+            })
+            
+
+            local ColorSection = SettingsTab:Section({
+                Name = "Library",
+                Side = "Right"
+            })
+
+            local LibrarySection = SettingsTab:Section({
+                Name = "Menu",
+                Side = "Left"
+            })
+
+            local folder = {}
+            local configloader = {}
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section
+            configloader["8b"] = Instance.new("Frame", Tab["27"]);
+            configloader["8b"]["BorderSizePixel"] = 0;
+            configloader["8b"]["BackgroundColor3"] = Color3.fromRGB(9, 9, 9);
+            configloader["8b"]["AutomaticSize"] = Enum.AutomaticSize.Y;
+            configloader["8b"]["Size"] = UDim2.new(1, 0, 0, 25);
+            configloader["8b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["8b"]["Name"] = [[section]];
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.UIStroke
+            configloader["8c"] = Instance.new("UIStroke", configloader["8b"]);
+            configloader["8c"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.UIGradient
+            configloader["8d"] = Instance.new("UIGradient", configloader["8b"]);
+            configloader["8d"]["Rotation"] = 90;
+            configloader["8d"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.UICorner
+            configloader["8e"] = Instance.new("UICorner", configloader["8b"]);
+            configloader["8e"]["CornerRadius"] = UDim.new(0.01, 5);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.name
+            configloader["8f"] = Instance.new("TextLabel", configloader["8b"]);
+            configloader["8f"]["TextStrokeTransparency"] = 0;
+            configloader["8f"]["BorderSizePixel"] = 0;
+            configloader["8f"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+            configloader["8f"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["8f"]["TextSize"] = 14;
+            configloader["8f"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            configloader["8f"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["8f"]["BackgroundTransparency"] = 1;
+            configloader["8f"]["Size"] = UDim2.new(0.5, 0, 0, 10);
+            configloader["8f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["8f"]["Text"] = [[Configs]];
+            configloader["8f"]["Name"] = [[name]];
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.name.UIPadding
+            configloader["90"] = Instance.new("UIPadding", configloader["8f"]);
+            configloader["90"]["PaddingLeft"] = UDim.new(0, 10);
+            configloader["90"]["PaddingBottom"] = UDim.new(0, 9);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content
+            configloader["91"] = Instance.new("Frame", configloader["8b"]);
+            configloader["91"]["BorderSizePixel"] = 0;
+            configloader["91"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["91"]["Size"] = UDim2.new(0.05, 0, 1, 0);
+            configloader["91"]["Position"] = UDim2.new(0, 8, 0, 15);
+            configloader["91"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["91"]["Name"] = [[content]];
+            configloader["91"]["BackgroundTransparency"] = 1;
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.configloader
+            configloader["92"] = Instance.new("Frame", configloader["91"]);
+            configloader["92"]["BorderSizePixel"] = 0;
+            configloader["92"]["BackgroundColor3"] = Color3.fromRGB(17, 17, 17);
+            configloader["92"]["AutomaticSize"] = Enum.AutomaticSize.Y;
+            configloader["92"]["Size"] = UDim2.new(0, 160, 0, 20);
+            configloader["92"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["92"]["Name"] = [[configloader]];
+            configloader["92"]["BackgroundTransparency"] = 1;
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.configloader.UIStroke
+            configloader["93"] = Instance.new("UIStroke", configloader["92"]);
+            configloader["93"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.configloader.UIGradient
+            configloader["94"] = Instance.new("UIGradient", configloader["92"]);
+            configloader["94"]["Rotation"] = 90;
+            configloader["94"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(113, 113, 113))};
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.configloader.UICorner
+            configloader["95"] = Instance.new("UICorner", configloader["92"]);
+            configloader["95"]["CornerRadius"] = UDim.new(0.01, 5);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.configloader.holder
+            configloader["96"] = Instance.new("Frame", configloader["92"]);
+            configloader["96"]["BorderSizePixel"] = 0;
+            configloader["96"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["96"]["Size"] = UDim2.new(1, 0, 1, 0);
+            configloader["96"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["96"]["Name"] = [[holder]];
+            configloader["96"]["BackgroundTransparency"] = 1;
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.configloader.holder.UIListLayout
+            configloader["98"] = Instance.new("UIListLayout", configloader["96"]);
+            configloader["98"]["SortOrder"] = Enum.SortOrder.LayoutOrder;
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.name
+            configloader["9a"] = Instance.new("Frame", configloader["91"]);
+            configloader["9a"]["BorderSizePixel"] = 0;
+            configloader["9a"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["9a"]["Size"] = UDim2.new(0, 160, 0, 13);
+            configloader["9a"]["Position"] = UDim2.new(0, 0, 0, 55);
+            configloader["9a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["9a"]["Name"] = [[name]];
+            configloader["9a"]["BackgroundTransparency"] = 1;
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.name.textbox
+            configloader["9b"] = Instance.new("TextBox", configloader["9a"]);
+            configloader["9b"]["CursorPosition"] = -1;
+            configloader["9b"]["TextStrokeTransparency"] = 0;
+            configloader["9b"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["9b"]["PlaceholderColor3"] = Color3.fromRGB(179, 179, 179);
+            configloader["9b"]["BorderSizePixel"] = 0;
+            configloader["9b"]["TextSize"] = 14;
+            configloader["9b"]["Name"] = [[textbox]];
+            configloader["9b"]["BackgroundColor3"] = Color3.fromRGB(35, 35, 35);
+            configloader["9b"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            configloader["9b"]["AnchorPoint"] = Vector2.new(0, 1);
+            configloader["9b"]["PlaceholderText"] = [[Config Name]];
+            configloader["9b"]["Size"] = UDim2.new(0, 160, 0, 14);
+            configloader["9b"]["Position"] = UDim2.new(0, 0, 1, 0);
+            configloader["9b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["9b"]["Text"] = [[]];
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.name.textbox.UIGradient
+            configloader["9c"] = Instance.new("UIGradient", configloader["9b"]);
+            configloader["9c"]["Rotation"] = 90;
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.name.textbox.UICorner
+            configloader["9d"] = Instance.new("UICorner", configloader["9b"]);
+            configloader["9d"]["CornerRadius"] = UDim.new(0, 2);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.name.textbox.UIStroke
+            configloader["9e"] = Instance.new("UIStroke", configloader["9b"]);
+            configloader["9e"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+            configloader["9e"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.create
+            configloader["9f"] = Instance.new("TextButton", configloader["91"]);
+            configloader["9f"]["TextStrokeTransparency"] = 0;
+            configloader["9f"]["BorderSizePixel"] = 0;
+            configloader["9f"]["AutoButtonColor"] = false;
+            configloader["9f"]["TextSize"] = 14;
+            configloader["9f"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["9f"]["BackgroundColor3"] = Color3.fromRGB(50, 50, 50);
+            configloader["9f"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            configloader["9f"]["Size"] = UDim2.new(0, 75, 0, 14);
+            configloader["9f"]["Name"] = [[create]];
+            configloader["9f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["9f"]["Text"] = [[Create]];
+            configloader["9f"]["Position"] = UDim2.new(0, 0, 0, 75);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.create.UIGradient
+            configloader["a0"] = Instance.new("UIGradient", configloader["9f"]);
+            configloader["a0"]["Rotation"] = 90;
+            configloader["a0"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.create.UIStroke
+            configloader["a1"] = Instance.new("UIStroke", configloader["9f"]);
+            configloader["a1"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+            configloader["a1"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.create.UICorner
+            configloader["a2"] = Instance.new("UICorner", configloader["9f"]);
+            configloader["a2"]["CornerRadius"] = UDim.new(0, 2);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.delete
+            configloader["a3"] = Instance.new("TextButton", configloader["91"]);
+            configloader["a3"]["TextStrokeTransparency"] = 0;
+            configloader["a3"]["BorderSizePixel"] = 0;
+            configloader["a3"]["AutoButtonColor"] = false;
+            configloader["a3"]["TextSize"] = 14;
+            configloader["a3"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["a3"]["BackgroundColor3"] = Color3.fromRGB(50, 50, 50);
+            configloader["a3"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            configloader["a3"]["Size"] = UDim2.new(0, 75, 0, 14);
+            configloader["a3"]["Name"] = [[delete]];
+            configloader["a3"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["a3"]["Text"] = [[Delete]];
+            configloader["a3"]["Position"] = UDim2.new(0, 86, 0, 75);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.delete.UIGradient
+            configloader["a4"] = Instance.new("UIGradient", configloader["a3"]);
+            configloader["a4"]["Rotation"] = 90;
+            configloader["a4"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.delete.UIStroke
+            configloader["a5"] = Instance.new("UIStroke", configloader["a3"]);
+            configloader["a5"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+            configloader["a5"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.delete.UICorner
+            configloader["a6"] = Instance.new("UICorner", configloader["a3"]);
+            configloader["a6"]["CornerRadius"] = UDim.new(0, 2);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.save
+            configloader["a7"] = Instance.new("TextButton", configloader["91"]);
+            configloader["a7"]["TextStrokeTransparency"] = 0;
+            configloader["a7"]["BorderSizePixel"] = 0;
+            configloader["a7"]["AutoButtonColor"] = false;
+            configloader["a7"]["TextSize"] = 14;
+            configloader["a7"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["a7"]["BackgroundColor3"] = Color3.fromRGB(50, 50, 50);
+            configloader["a7"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            configloader["a7"]["Size"] = UDim2.new(0, 75, 0, 14);
+            configloader["a7"]["Name"] = [[save]];
+            configloader["a7"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["a7"]["Text"] = [[Save]];
+            configloader["a7"]["Position"] = UDim2.new(0, 86, 0, 95);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.save.UIGradient
+            configloader["a8"] = Instance.new("UIGradient", configloader["a7"]);
+            configloader["a8"]["Rotation"] = 90;
+            configloader["a8"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.save.UIStroke
+            configloader["a9"] = Instance.new("UIStroke", configloader["a7"]);
+            configloader["a9"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+            configloader["a9"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.save.UICorner
+            configloader["aa"] = Instance.new("UICorner", configloader["a7"]);
+            configloader["aa"]["CornerRadius"] = UDim.new(0, 2);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.load
+            configloader["ab"] = Instance.new("TextButton", configloader["91"]);
+            configloader["ab"]["TextStrokeTransparency"] = 0;
+            configloader["ab"]["BorderSizePixel"] = 0;
+            configloader["ab"]["AutoButtonColor"] = false;
+            configloader["ab"]["TextSize"] = 14;
+            configloader["ab"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+            configloader["ab"]["BackgroundColor3"] = Color3.fromRGB(50, 50, 50);
+            configloader["ab"]["FontFace"] = Font.new([[rbxasset://fonts/families/RobotoMono.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+            configloader["ab"]["Size"] = UDim2.new(0, 75, 0, 14);
+            configloader["ab"]["Name"] = [[load]];
+            configloader["ab"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+            configloader["ab"]["Text"] = [[Load]];
+            configloader["ab"]["Position"] = UDim2.new(0, 0, 0, 95);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.load.UIGradient
+            configloader["ac"] = Instance.new("UIGradient", configloader["ab"]);
+            configloader["ac"]["Rotation"] = 90;
+            configloader["ac"]["Color"] = ColorSequence.new{ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 255, 255)),ColorSequenceKeypoint.new(1.000, Color3.fromRGB(137, 137, 137))};
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.load.UIStroke
+            configloader["ad"] = Instance.new("UIStroke", configloader["ab"]);
+            configloader["ad"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+            configloader["ad"]["Color"] = Color3.fromRGB(41, 41, 41);
+
+            -- StarterGui.obeseui.main.contentcontainer.tab.sectionholders.right.section.content.load.UICorner
+            configloader["ae"] = Instance.new("UICorner", configloader["ab"]);
+            configloader["ae"]["CornerRadius"] = UDim.new(0, 2);
+        end
+ 
+        table.insert(Library.Tabs, Tab)
+		return Tab
+	end
+
+	return Window
+end
+
+local window = Library:Window({
+    Title = "Aether"
+})
+
+local Tabs = {
+    Legit = window:Tab({Name = "Legit"}),
+    Rage = window:Tab({Name = "Rage"}),
+    Misc = window:Tab({Name = "Misc"}),
+    Visuals = window:Tab({Name = "Visuals"}),
+}
+
+local Sections = {
+    Legit = {
+        Silent = Tabs.Legit:Section({Name = "Silent Aim",Side = "left"}),
+        Fov = Tabs.Legit:Section({Name = "Field Of View",Side = "left"}),
+        Assist = Tabs.Legit:Section({Name = "Aim Assist",Side = "right"}),
+        Visuals = Tabs.Legit:Section({Name = "Visuals",Side = "left"}),
+        TriggerBot = Tabs.Legit:Section({Name = "Trigger Bot", Side = "right"})
+    },
+
+    Rage = {
+        Target = Tabs.Rage:Section({Name = "Target",Side = "left"}),
+        Strafe = Tabs.Rage:Section({Name = "Strafe",Side = "right"}),
+        Visuals = Tabs.Rage:Section({Name = "Visuals",Side = "left"})
+    }
+}
+-- the variables we need for the silent aim
+local SilentPos 
+local SilentPredictionPos
+local SilentTarget
+local silentoldpart
+
+local assistpos 
+local assistpredictedpos
+local assisttarget
+local assistoldpart
+
+local targetpos 
+local targetpredictionpos 
+local targetaim
+local targetoldpart
+
+-- draw the circle
+local FOVCircle = draw("Circle") do 
+    FOVCircle.Visible = Configurations.SilentAim.FieldOfView.Visible
+    FOVCircle.Radius  = Configurations.SilentAim.FieldOfView.Radius
+    FOVCircle.Color   = Configurations.SilentAim.FieldOfView.Color
+    FOVCircle.Filled  = Configurations.SilentAim.FieldOfView.Filled
+    FOVCircle.Transparency = Configurations.SilentAim.FieldOfView.Transparency
+end
+
+local TargetTracer = draw("Line") do
+    TargetTracer.Visible = Configurations.SilentAim.Visuals.Tracer
+    TargetTracer.Color = Configurations.SilentAim.Visuals.TracerColor
+    TargetTracer.Thickness = Configurations.SilentAim.Visuals.TracerThickness
+    TargetTracer.Transparency = 0
+end
+
+local TargetCham = Instance.new("Highlight") do 
+    TargetCham.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    TargetCham.FillColor = Configurations.SilentAim.Visuals.HighlightFillColor
+    TargetCham.OutlineColor = Configurations.SilentAim.Visuals.HighlightOutlineColor
+    TargetCham.Enabled = Configurations.SilentAim.Visuals.Highlight
+end
+local TargetDot = draw("Circle") do
+    TargetDot.Visible = Configurations.SilentAim.Visuals.Dot
+    TargetDot.Radius  = Configurations.SilentAim.Visuals.DotSize
+    TargetDot.Color   = Configurations.SilentAim.Visuals.DotColor
+    TargetDot.Filled  = true
+    TargetDot.Transparency = 1
+end
+--
+local tracer = draw("Line") do
+    tracer.Visible = Configurations.Target.Visuals.Tracer
+    tracer.Color = Configurations.SilentAim.Visuals.TracerColor
+    tracer.Thickness = Configurations.SilentAim.Visuals.TracerThickness
+    tracer.Transparency = 0
+end
+--
+local cham = Instance.new("Highlight") do 
+    cham.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    cham.FillColor = Configurations.SilentAim.Visuals.HighlightFillColor
+    cham.OutlineColor = Configurations.SilentAim.Visuals.HighlightOutlineColor
+    cham.Enabled = Configurations.SilentAim.Visuals.Highlight or Configurations.Target.Visuals.Info
+end
+--
+
+
+local function calculateVelocity(inpos, finalpos, interval)
+    local displacement = finalpos - inpos
+    local velocity = displacement / interval
+    return velocity
+end
+
+local function getRemote()
+    local gameinfo = Games[game.PlaceId]
+    return ReplicatedStorage:FindFirstChild(gameinfo.Remote)
+end
+
+local function getArg()
+    local gameinfo = Games[game.PlaceId]
+    return gameinfo.Arg
+end
+
+
+local function GetClosestPlayer(distance)
+    local Distance, Player = distance
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if (v == LocalPlayer) then continue end
+
+        local Character = v.Character
+        local RootPart  = Character and Character:FindFirstChild('HumanoidRootPart')
+
+        if (not RootPart) then continue end
+
+        local Position, OnScreen = Camera:WorldToViewportPoint(RootPart.Position)
+        local Magnitude = (Vector2.new(Position.X, Position.Y) - UserInputService:GetMouseLocation()).Magnitude
+
+        if Magnitude > Distance then continue end
+
+        if OnScreen then
+            Distance = Magnitude
+            Player = v
+        end
+    end
+
+    return Player
+end
+
+local function GetClosestPlayer2()
+    local Distance, Player = math.huge
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if (v == LocalPlayer) then continue end
+
+        local Character = v.Character
+        local RootPart  = Character and Character:FindFirstChild('HumanoidRootPart')
+
+        if (not RootPart) then continue end
+
+        local Position, OnScreen = Camera:WorldToViewportPoint(RootPart.Position)
+        local Magnitude = (Vector2.new(Position.X, Position.Y) - UserInputService:GetMouseLocation()).Magnitude
+
+        if Magnitude > Distance then continue end
+
+        if OnScreen then
+            Distance = Magnitude
+            Player = v
+        end
+    end
+
+    return Player
+end
+
+local function wtsp(v)
+    local vector = Camera:WorldToScreenPoint(v.Position)
+    return Vector2.new(vector.X, vector.Y)
+end
+    
+local function isonsc(v)
+    local isonsc = Camera:WorldToScreenPoint(v.Position)
+    return isonsc
+end
+    
+local function filterobjects(v)
+
+    if string.find(v.Name, "Gun") then
+      return
+    end
+    --
+    if table.find({"Part", "MeshPart", "BasePart"}, v.ClassName) then
+      return true
+    end
+end
+
+local function returnclosestpart(char)
+    local closdistnc = 1/0
+    local part = nil
+    
+    if (char and char:GetChildren()) then
+        for _,  x in next, char:GetChildren() do
+            if filterobjects(x) and isonsc(x) then
+                local dist = (wtsp(x) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                if (dist < closdistnc) then
+                    closdistnc = dist
+                    part = x
+                end
+            end
+        end
+    end
+    return part
+end
+
+local function UpdateVisuals()
+    FOVCircle.Visible = Configurations.SilentAim.FieldOfView.Visible
+    FOVCircle.Radius  = Configurations.SilentAim.FieldOfView.Radius
+    FOVCircle.Color   = Configurations.SilentAim.FieldOfView.Color
+    FOVCircle.Filled  = Configurations.SilentAim.FieldOfView.Filled
+    FOVCircle.Transparency = Configurations.SilentAim.FieldOfView.Transparency
+    FOVCircle.Position = UserInputService:GetMouseLocation()
+    --
+    TargetTracer.Visible = Configurations.SilentAim.Visuals.Tracer
+    TargetTracer.Color = Configurations.SilentAim.Visuals.TracerColor
+    TargetTracer.Thickness = Configurations.SilentAim.Visuals.TracerThickness
+    TargetTracer.Transparency = 1
+    --
+    TargetCham.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    TargetCham.FillColor = Configurations.SilentAim.Visuals.HighlightFillColor
+    TargetCham.OutlineColor = Configurations.SilentAim.Visuals.HighlightOutlineColor
+    TargetCham.Enabled = Configurations.SilentAim.Visuals.Highlight
+    --
+    TargetDot.Visible = Configurations.SilentAim.Visuals.Dot
+    TargetDot.Radius  = Configurations.SilentAim.Visuals.DotSize
+    TargetDot.Color   = Configurations.SilentAim.Visuals.DotColor
+    TargetDot.Filled  = true
+    TargetDot.Transparency = 1
+
+    if SilentTarget then
+        local Position, onscreen = Camera:WorldToViewportPoint(SilentTarget.Character[Configurations.SilentAim.Aimpart].Position)
+        if onscreen then
+            TargetTracer.From = UserInputService:GetMouseLocation()
+            TargetTracer.To = Vector2.new(Position.X,Position.Y)
+            --
+            TargetCham.Parent = SilentTarget.Character
+            TargetCham.Adornee = SilentTarget.Character
+            --
+            TargetDot.Position = Vector2.new(Position.X,Position.Y)
+        else
+            TargetTracer.Visible = false
+            TargetCham.Enabled = false
+            TargetDot.Visible = false
+        end
+    else
+        TargetTracer.Visible = false
+        TargetCham.Enabled = false
+        TargetDot.Visible = false
+    end
+
+    Players.PlayerRemoving:Connect(function(plr)
+        if SilentTarget and plr.DisplayName == SilentTarget.DisplayName then 
+            TargetTracer.Visible = false
+            TargetCham.Enabled = false
+            TargetDot.Visible = false
+        end
+    end)
+
+
+
+    tracer.Visible = Configurations.Target.Visuals.Tracer
+    tracer.Color = Configurations.Target.Visuals.TracerColor
+    tracer.Thickness = Configurations.Target.Visuals.TracerThickness
+    tracer.Transparency = 0
+    --
+    cham.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    cham.FillColor = Configurations.Target.Visuals.HighlightFillColor
+    cham.OutlineColor = Configurations.Target.Visuals.HighlightOutlineColor
+    cham.Enabled = Configurations.Target.Visuals.Highlight
+
+    if targetaim then 
+        local Position, onscreen = Camera:WorldToViewportPoint(targetaim.Character[Configurations.Target.Aimpart].Position)
+
+        if onscreen then
+            tracer.From = UserInputService:GetMouseLocation()
+            tracer.To = Vector2.new(Position.X,Position.Y)
+            --
+            cham.Parent = targetaim.Character
+            cham.Adornee = targetaim.Character
+        else
+            tracer.Visible = false
+            cham.Enabled = false
+        end
+    else
+        tracer.Visible = false
+        cham.Enabled = false
+    end
+
+    Players.PlayerRemoving:Connect(function(plr)
+        if targetaim and plr.DisplayName == targetaim.DisplayName then 
+            tracer.Visible = false
+            tracer.Enabled = false
+        end
+    end)
+
+end
+
+
+
+Sections.Legit.Silent:Toggle({Name = "Enabled",Callback = function(v) Configurations.SilentAim.Enabled = v end})
+Sections.Legit.Silent:Dropdown({Name = "Hit Part",Options = {"Head","UpperTorso","LowerTorso","HumanoidRootPart"},Default = "LowerTorso", Callback = function(v)Configurations.SilentAim.Aimpart = v silentoldpart = v end})
+Sections.Legit.Silent:Toggle({Name = "Closest Part",Callback = function(v) Configurations.SilentAim.ClosestPart = v end})
+Sections.Legit.Silent:Textbox({Name = "Prediction",Placeholder = "...",Default = "0.13913",Callback = function(v) Configurations.SilentAim.Prediction = v end})
+Sections.Legit.Silent:Toggle({Name = "Automatic Prediction",Callback = function(v) Configurations.SilentAim.AutomaticPrediction = v end})
+Sections.Legit.Silent:Toggle({Name = "Airshot",Callback = function(v) Configurations.SilentAim.Airshot.Enabled = v end})
+Sections.Legit.Silent:Dropdown({Name = "Airshot Part",Options = {"Head","UpperTorso","LowerTorso","HumanoidRootPart"},Callback = function(v) Configurations.SilentAim.Airshot.Aimpart = v end })
+Sections.Legit.Silent:Toggle({Name = "Use Air Prediction",Callback = function(v) Configurations.SilentAim.Airshot.UseAirprediction = v end})
+Sections.Legit.Silent:Textbox({Name = "Air Prediction",Placeholder = ". . .",Default = "0.13913", Callback = function(v) Configurations.SilentAim.Airshot.AirPrediction = tonumber(v) end})
+Sections.Legit.Silent:Toggle({Name = "Use Jump Offset",Callback = function(v) Configurations.SilentAim.Airshot.UseJumpOffset = v end})
+Sections.Legit.Silent:Textbox({Name = "Jump Offset",Placeholder = ". . .",Default = "0.03", Callback = function(v) Configurations.SilentAim.Airshot.JumpOffset = tonumber(v) end})
+Sections.Legit.Silent:Toggle({Name = "Resolver",Callback = function(v) Configurations.SilentAim.Resolver.Enabled = v end})
+Sections.Legit.Silent:Dropdown({Name = "Method",Options = {"0 Velocity","DeltaTime"},Callback = function(v) Configurations.SilentAim.Resolver.Method = v end })
+
+Sections.Legit.Fov:Toggle({Name = "Visible",Callback = function(v) Configurations.SilentAim.FieldOfView.Visible = v end})
+Sections.Legit.Fov:Colorpicker({Name = "Color", Callback = function(v) Configurations.SilentAim.FieldOfView.Color = v end})
+Sections.Legit.Fov:Slider({Name = "Size", Min = 5, Max = 1500, Callback = function(v) Configurations.SilentAim.FieldOfView.Radius = v end})
+Sections.Legit.Fov:Toggle({Name = "Filled",Callback = function(v) Configurations.SilentAim.FieldOfView.Filled = v end})
+Sections.Legit.Fov:Slider({Name = "Transparency", Default = 1, Min = 0, Max = 1, Decimals = 0.1, Callback = function(v) Configurations.SilentAim.FieldOfView.Transparency = v end})
+
+Sections.Legit.Visuals:Toggle({Name = "Line",Callback = function(v) Configurations.SilentAim.Visuals.Tracer = v end})
+Sections.Legit.Visuals:Toggle({Name = "Highlight",Callback = function(v) Configurations.SilentAim.Visuals.Highlight = v end})
+Sections.Legit.Visuals:Colorpicker({Name = "Line Color", Callback = function(v) Configurations.SilentAim.Visuals.TracerColor = v end})
+Sections.Legit.Visuals:Slider({Name = "Line Thickness", Default = 1, Min = 0.1, Max = 10, Decimals = 0.1, Callback = function(v) Configurations.SilentAim.Visuals.TracerThickness = v end})
+Sections.Legit.Visuals:Colorpicker({Name = "Highlight Fill Color", Callback = function(v) Configurations.SilentAim.Visuals.HighlightFillColor = v end})
+Sections.Legit.Visuals:Colorpicker({Name = "Highlight Fill Color", Default = Color3.fromRGB(0,0,0), Callback = function(v) Configurations.SilentAim.Visuals.HighlightOutlineColor = v end})
+Sections.Legit.Visuals:Toggle({Name = "Dot",Callback = function(v) Configurations.SilentAim.Visuals.Dot = v end})
+Sections.Legit.Visuals:Colorpicker({Name = "Dot Color", Callback = function(v) Configurations.SilentAim.Visuals.DotColor = v end})
+Sections.Legit.Visuals:Slider({Name = "Dot Size", Default = 5, Min = 0.1, Max = 25, Decimals = 0.1, Callback = function(v) Configurations.SilentAim.Visuals.DotSize = v end})
+
+Sections.Legit.Assist:Toggle({Name = "Enabled", Callback = function(v) Configurations.AimAssist.Enabled = v end})
+Sections.Legit.Assist:Keybind({
+    Name = "Keybind",
+    Callback = function(v)
+        Configurations.AimAssist.Toggled = v 
+        if Configurations.AimAssist.Toggled and Configurations.AimAssist.Enabled then
+            assisttarget = GetClosestPlayer2()
+        else
+            assisttarget = nil 
+        end
+    end
+})
+Sections.Legit.Assist:Dropdown({
+    Name = "Hit Part",
+    Options = {"Head","UpperTorso","LowerTorso","HumanoidRootPart"},
+    Default = "LowerTorso", 
+    Callback = function(v)
+        Configurations.AimAssist.Aimpart = v
+        assistoldpart = v end
+    })
+Sections.Legit.Assist:Textbox({
+    Name = "Prediction",
+    Placeholder = "...",
+    Default = "0.128",
+    Callback = function(v)
+        Configurations.AimAssist.Prediction = v
+    end
+})
+
+Sections.Legit.Assist:Toggle({Name = "Smoothness", Callback = function(v) Configurations.AimAssist.Smoothness.Enabled = v end})
+Sections.Legit.Assist:Slider({Name = "Smoothing factor", Min = 0.001, Max = 1, Decimals = 0.001, Callback = function(v) Configurations.AimAssist.Smoothness.SmoothingFactor = v end})
+Sections.Legit.Assist:Toggle({Name = "Shake", Callback = function(v) Configurations.AimAssist.Shake.Enabled = v end})
+Sections.Legit.Assist:Toggle({Name = "Use Axis Shaking", Callback = function(v) Configurations.AimAssist.Shake.UseAxisShaking = v end})
+Sections.Legit.Assist:Slider({Name = "Shaking factor", Min = 0.1, Max = 100, Decimals = 0.1, Callback = function(v) Configurations.AimAssist.Shake.Shaking = v end})
+Sections.Legit.Assist:Divider()
+Sections.Legit.Assist:Slider({Name = "Shake X", Min = 0.1, Max = 100, Decimals = 0.1, Default = Configurations.AimAssist.Shake.ShakeX, Callback = function(v) Configurations.AimAssist.Shake.ShakeX = v end})
+Sections.Legit.Assist:Slider({Name = "Shake Y", Min = 0.1, Max = 100, Decimals = 0.1, Default = Configurations.AimAssist.Shake.ShakeY, Callback = function(v) Configurations.AimAssist.Shake.ShakeY = v end})
+Sections.Legit.Assist:Slider({Name = "Shake Z", Min = 0.1, Max = 100, Decimals = 0.1, Default = Configurations.AimAssist.Shake.ShakeZ, Callback = function(v) Configurations.AimAssist.Shake.ShakeZ = v end})
+Sections.Legit.Assist:Divider()
+Sections.Legit.Assist:Toggle({Name = "Airshot",Callback = function(v) Configurations.AimAssist.Airshot.Enabled = v end})
+Sections.Legit.Assist:Dropdown({Name = "Airshot Part",Options = {"Head","UpperTorso","LowerTorso","HumanoidRootPart"},Callback = function(v) Configurations.AimAssist.Airshot.Aimpart = v end })
+Sections.Legit.Assist:Toggle({Name = "Use Air Prediction",Callback = function(v) Configurations.AimAssist.Airshot.UseAirprediction = v end})
+Sections.Legit.Assist:Textbox({Name = "Air Prediction",Placeholder = ". . .",Default = "0.13913", Callback = function(v) Configurations.AimAssist.Airshot.AirPrediction = tonumber(v) end})
+Sections.Legit.Assist:Toggle({Name = "Use Jump Offset",Callback = function(v) Configurations.AimAssist.Airshot.UseJumpOffset = v end})
+Sections.Legit.Assist:Textbox({Name = "Jump Offset",Placeholder = ". . .",Default = "0.03", Callback = function(v) Configurations.AimAssist.Airshot.JumpOffset = tonumber(v) end})
+Sections.Legit.Assist:Divider()
+Sections.Legit.Assist:Toggle({Name = "Humanize", Callback = function(v) Configurations.AimAssist.Humanize.Enabled = v end})
+Sections.Legit.Assist:Slider({Name = "Humanize Power", Min = 0.01, Max = 2, Decimals = 0.01, Default = Configurations.AimAssist.Humanize.Power, Callback = function(v) Configurations.AimAssist.Humanize.Power = v end})
+
+Sections.Legit.TriggerBot:Toggle({Name = "Enabled", Callback = function(v) getgenv().triggerbotcfg.Enabled = v end})
+Sections.Legit.TriggerBot:Toggle({Name = "Visualize", Callback = function(v) getgenv().triggerbotcfg.Visualize = v end})
+Sections.Legit.TriggerBot:Textbox({Name = "Prediction",Placeholder = "...",Default = "0.1355",Callback = function(v) getgenv().triggerbotcfg.Prediction = v end})
+Sections.Legit.TriggerBot:Slider({Name = "Range", Min = 0.01, Max = 100, Decimals = 0.01, Default = getgenv().triggerbotcfg.Range, Callback = function(v) getgenv().triggerbotcfg.Range = v end})
+Sections.Legit.TriggerBot:Toggle({Name = "Automatic Prediction", Callback = function(v) getgenv().triggerbotcfg.AutomaticPrediction = v end})
+Sections.Legit.TriggerBot:Toggle({Name = "Use Delay", Callback = function(v) getgenv().triggerbotcfg.useDelay = v end})
+Sections.Legit.TriggerBot:Textbox({Name = "Delay Value",Placeholder = "...",Default = "0.02",Callback = function(v) getgenv().triggerbotcfg.Delay = v end})
+
+Sections.Rage.Target:Toggle({Name = "Enabled", Callback = function(v) Configurations.Target.Enabled = v end})
+Sections.Rage.Target:Keybind({
+    Name = "Keybind",
+    Callback = function(v)
+        Configurations.Target.Toggled = v 
+        if Configurations.Target.Toggled and Configurations.Target.Enabled then
+            targetaim = GetClosestPlayer(1000)
+        else
+            targetaim = nil 
+        end
+    end
+})
+Sections.Rage.Target:Dropdown({
+    Name = "Hit Part",
+    Options = {"Head","UpperTorso","LowerTorso","HumanoidRootPart"},
+    Default = "LowerTorso", 
+    Callback = function(v)
+        Configurations.Target.Aimpart = v
+        targetoldpart = v end
+    })
+Sections.Rage.Target:Textbox({
+    Name = "Prediction",
+    Placeholder = "...",
+    Default = "0.1238",
+    Callback = function(v)
+        Configurations.Target.Prediction = v
+    end
+})
+Sections.Rage.Target:Toggle({Name = "Automatic Prediction", Callback = function(v) Configurations.Target.AutomaticPrediction = v end})
+Sections.Rage.Visuals:Toggle({Name = "Line",Callback = function(v) Configurations.Target.Visuals.Tracer = v end})
+Sections.Rage.Visuals:Toggle({Name = "Highlight",Callback = function(v) Configurations.Target.Visuals.Highlight = v end})
+Sections.Rage.Visuals:Colorpicker({Name = "Line Color", Callback = function(v) Configurations.Target.Visuals.TracerColor = v end})
+Sections.Rage.Visuals:Colorpicker({Name = "Highlight Fill Color", Callback = function(v) Configurations.Target.Visuals.HighlightFillColor = v end})
+Sections.Rage.Visuals:Colorpicker({Name = "Highlight Fill Color", Default = Color3.fromRGB(0,0,0), Callback = function(v) Configurations.Target.Visuals.HighlightOutlineColor = v end})
+Sections.Rage.Visuals:Slider({Name = "Line Thickness", Default = 1, Min = 0.1, Max = 10, Decimals = 0.1, Callback = function(v) Configurations.Target.Visuals.TracerThickness = v end})
+
+Sections.Rage.Strafe:Toggle({Name = "Enabled", Callback = function(v) Configurations.Target.Strafe.Enabled = v end})
+Sections.Rage.Strafe:Slider({Name = "Speed", Default = 5, Min = 0.1, Max = 100, Decimals = 0.1, Callback = function(v) Configurations.Target.Strafe.Speed = v end})
+Sections.Rage.Strafe:Slider({Name = "Distance", Default = 10, Min = 0.1, Max = 100, Decimals = 0.1, Callback = function(v) Configurations.Target.Strafe.Distance = v end})
+Sections.Rage.Strafe:Slider({Name = "Height", Default = 1, Min = 0.1, Max = 100, Decimals = 0.1, Callback = function(v) Configurations.Target.Strafe.Height = v end})
+-- loop
+RunService.RenderStepped:Connect(function(deltaTime)
+    if Configurations.SilentAim.Enabled then
+    UpdateVisuals()
+    SilentTarget = GetClosestPlayer(Configurations.SilentAim.FieldOfView.Radius) -- this will update everytime someones in the fov circle
+
+    if Configurations.SilentAim.Resolver.Enabled == true and Configurations.SilentAim.Resolver.Method == "DeltaTime" and SilentTarget then 
+        local char = SilentTarget.Character.HumanoidRootPart
+        local lastpos = char.Position
+        task.wait()
+        local currentpos = char.Position
+        local vel = calculateVelocity(lastpos, currentpos, deltaTime)
+        char.AssemblyLinearVelocity = vel
+        char.Velocity = vel
+        lastpos = currentpos
+    elseif Configurations.SilentAim.Resolver.Enabled == true and Configurations.SilentAim.Resolver.Method == "0 Velocity" and SilentTarget then
+        local char = SilentTarget.Character.HumanoidRootPart
+        char.AssemblyLinearVelocity = Vector3.new(0,0,0)
+    end
+
+    SilentPos = SilentTarget.Character[Configurations.SilentAim.Aimpart].Position
+    SilentPredictionPos = (SilentTarget.Character[Configurations.SilentAim.Aimpart].Velocity) * Configurations.SilentAim.Prediction
+
+    -- hood customs supported
+
+    
+    if Configurations.SilentAim.ClosestPart then 
+        Configurations.SilentAim.Aimpart = tostring(returnclosestpart(SilentTarget.Character))
+    else
+        Configurations.SilentAim.Aimpart = silentoldpart
+    end
+    -- this is just a shitty method for the airshot, but it works fine
+    if Configurations.SilentAim.Airshot.Enabled then 
+        if Configurations.SilentAim.Airshot.UseAirprediction then 
+            if Configurations.SilentAim.Airshot.UseJumpOffset then 
+                if SilentTarget.Character.Humanoid.FloorMaterial == Enum.Material.Air or SilentTarget.Character.Humanoid:GetState() == Enum.HumanoidStateType.FallingDown or SilentTarget.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall then 
+                    Configurations.SilentAim.Aimpart = Configurations.SilentAim.Airshot.Aimpart
+                    SilentPredictionPos = (SilentTarget.Character[Configurations.SilentAim.Aimpart].Velocity) * Configurations.SilentAim.Airshot.AirPrediction + Vector3.new(0,Configurations.SilentAim.Airshot.JumpOffset,0)
+                else
+                    SilentPredictionPos = (SilentTarget.Character[Configurations.SilentAim.Aimpart].Velocity) * Configurations.SilentAim.Prediction
+                    Configurations.SilentAim.Aimpart = silentoldpart
+                end
+            else
+                if SilentTarget.Character.Humanoid.FloorMaterial == Enum.Material.Air or SilentTarget.Character.Humanoid:GetState() == Enum.HumanoidStateType.FallingDown or SilentTarget.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall then 
+                Configurations.SilentAim.Aimpart = Configurations.SilentAim.Airshot.Aimpart
+                SilentPredictionPos = (SilentTarget.Character[Configurations.SilentAim.Aimpart].Velocity) * Configurations.SilentAim.Airshot.AirPrediction
+                else
+                    SilentPredictionPos = (SilentTarget.Character[Configurations.SilentAim.Aimpart].Velocity) * Configurations.SilentAim.Prediction
+                    Configurations.SilentAim.Aimpart = silentoldpart
+                end
+            end
+        else
+            if SilentTarget.Character.Humanoid.FloorMaterial == Enum.Material.Air or SilentTarget.Character.Humanoid:GetState() == Enum.HumanoidStateType.FallingDown or SilentTarget.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall then 
+                Configurations.SilentAim.Aimpart = Configurations.SilentAim.Airshot.Aimpart
+            else
+                SilentPredictionPos = (SilentTarget.Character[Configurations.SilentAim.Aimpart].Velocity) * Configurations.SilentAim.Prediction
+                Configurations.SilentAim.Aimpart = silentoldpart
+            end
+        end
+    end
+
+    if Configurations.SilentAim.AutomaticPrediction then
+        local PingStats = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+        local Value = tostring(PingStats)
+        local PingValue = Value:split(" ")
+        local PingNumber = tonumber(PingValue[1])
+            if PingNumber < 30 then
+                Configurations.SilentAim.Prediction = 0.12588
+            elseif PingNumber < 40 then
+                Configurations.SilentAim.Prediction = 0.11
+            elseif PingNumber < 50 then
+                Configurations.SilentAim.Prediction = 0.125
+            elseif PingNumber < 60 then
+                Configurations.SilentAim.Prediction = 0.127668
+            elseif PingNumber < 70 then
+                Configurations.SilentAim.Prediction = 0.11243
+            elseif PingNumber < 80 then
+                Configurations.SilentAim.Prediction = 0.119
+            elseif PingNumber < 90 then
+                Configurations.SilentAim.Prediction = 0.1347
+            elseif PingNumber < 100 then
+                Configurations.SilentAim.Prediction = 0.13626
+            elseif PingNumber < 110 then
+                Configurations.SilentAim.Prediction = 0.13829
+            elseif PingNumber < 120 then
+                Configurations.SilentAim.Prediction = 0.146
+            elseif PingNumber < 130 then
+                Configurations.SilentAim.Prediction = 0.149
+            elseif PingNumber < 140 then
+                Configurations.SilentAim.Prediction = 0.151
+            elseif PingNumber < 150 then
+                Configurations.SilentAim.Prediction = 0.1652131
+            elseif PingNumber < 160 then
+                Configurations.SilentAim.Prediction = 0.125333
+            elseif PingNumber < 170 then
+                Configurations.SilentAim.Prediction = 0.1223333
+            elseif PingNumber < 180 then
+                Configurations.SilentAim.Prediction = 0.15
+            elseif PingNumber < 190 then
+                Configurations.SilentAim.Prediction = 0.1923111
+            elseif PingNumber < 200 then
+                Configurations.SilentAim.Prediction = 0.165771
+            elseif PingNumber < 210 then
+                Configurations.SilentAim.Prediction = 0.1746
+            end
+        end
+end
+
+local closestPlayer = getClosestPlayer()
+if closestPlayer and getgenv().triggerbotcfg.Enabled then
+    circle.Radius = getgenv().triggerbotcfg.Range
+    local hrp = getClosestBodyPartToMouse(closestPlayer)
+    if hrp and Players.LocalPlayer.Character:FindFirstChildOfClass("Tool") ~= nil and Players.LocalPlayer.Character:FindFirstChildOfClass("Tool").Name  ~= "[Knife]" and Players.LocalPlayer.Character:FindFirstChildOfClass("Tool").Name  ~= "Wallet" and Players.LocalPlayer.Character:FindFirstChildOfClass("Tool").Name  ~= "[Boombox]" then
+        local aimPos = hrp.Position + hrp.Velocity * getgenv().triggerbotcfg.Prediction
+        local screenPos, onScreen = Camera:WorldToViewportPoint(aimPos)
+        local tool = Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
+        if onScreen then
+            circle.Position = Vector2.new(screenPos.X, screenPos.Y)
+            circle.Visible = getgenv().triggerbotcfg.Visualize
+            local mousePos = UserInputService:GetMouseLocation()
+            local distance = (mousePos - circle.Position).magnitude
+            if getgenv().triggerbotcfg.useDelay then 
+                if distance <= circle.Radius then
+                    task.delay(getgenv().triggerbotcfg.Delay,function()
+                    tool:Activate()
+                    circle.Color = Color3.fromRGB(255, 0, 0)  -- Red 
+                    end)
+                else
+
+                circle.Color = Color3.fromRGB(204, 255, 255)  -- OG 
+            end
+        else
+            tool:Activate()
+            circle.Color = Color3.fromRGB(255, 0, 0)  -- Red 
+        end
+
+        else
+            circle.Visible = false
+        end
+    else
+        circle.Visible = false
+    end
+else
+    circle.Visible = false
+end
+
+if getgenv().triggerbotcfg.AutomaticPrediction then 
+    local PingStats = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+    local Value = tostring(PingStats)
+    local PingValue = Value:split(" ")
+    local PingNumber = tonumber(PingValue[1])
+        if PingNumber < 30 then
+            getgenv().triggerbotcfg.Prediction = 0.12588
+        elseif PingNumber < 40 then
+            getgenv().triggerbotcfg.Prediction = 0.11
+        elseif PingNumber < 50 then
+            getgenv().triggerbotcfg.Prediction = 0.125
+        elseif PingNumber < 60 then
+            getgenv().triggerbotcfg.Prediction = 0.127668
+        elseif PingNumber < 70 then
+            getgenv().triggerbotcfg.Prediction = 0.11243
+        elseif PingNumber < 80 then
+            getgenv().triggerbotcfg.Prediction = 0.119
+        elseif PingNumber < 90 then
+            getgenv().triggerbotcfg.Prediction = 0.1347
+        elseif PingNumber < 100 then
+            getgenv().triggerbotcfg.Prediction = 0.13626
+        elseif PingNumber < 110 then
+            getgenv().triggerbotcfg.Prediction = 0.13829
+        elseif PingNumber < 120 then
+            getgenv().triggerbotcfg.Prediction = 0.146
+        elseif PingNumber < 130 then
+            getgenv().triggerbotcfg.Prediction = 0.149
+        elseif PingNumber < 140 then
+            getgenv().triggerbotcfg.Prediction= 0.151
+        elseif PingNumber < 150 then
+            getgenv().triggerbotcfg.Prediction = 0.1652131
+        elseif PingNumber < 160 then
+            getgenv().triggerbotcfg.Prediction= 0.125333
+        elseif PingNumber < 170 then
+            getgenv().triggerbotcfg.Prediction = 0.1223333
+        elseif PingNumber < 180 then
+            getgenv().triggerbotcfg.Prediction = 0.15
+        elseif PingNumber < 190 then
+            getgenv().triggerbotcfg.Prediction = 0.1923111
+        elseif PingNumber < 200 then
+            getgenv().triggerbotcfg.Prediction = 0.165771
+        elseif PingNumber < 210 then
+            getgenv().triggerbotcfg.Prediction = 0.1746
+        end
+    end
+
+    if Configurations.AimAssist.Enabled then
+        assistpos = assisttarget.Character[Configurations.AimAssist.Aimpart].Position 
+        assistpredictedpos = assisttarget.Character[Configurations.AimAssist.Aimpart].Velocity * Configurations.AimAssist.Prediction 
+
+
+        if Configurations.AimAssist.ClosestPart then 
+            Configurations.AimAssist.Aimpart = tostring(returnclosestpart(assisttarget.Character))
+        else
+            Configurations.AimAssist.Aimpart = assistoldpart
+        end
+
+
+        if Configurations.AimAssist.Toggled and assisttarget then
+            if Configurations.AimAssist.Smoothness.Enabled then 
+                if Configurations.AimAssist.Shake.Enabled then
+                    if Configurations.AimAssist.UseAxisShaking then
+                        local main = CFrame.new(
+                            Camera.CFrame.Position,
+                            assistpos + assistpredictedpos + Vector3.new(
+                                math.random(-Configurations.AimAssist.Shake.ShakeX,Configurations.AimAssist.Shake.ShakeX),
+                                math.random(-Configurations.AimAssist.Shake.ShakeY,Configurations.AimAssist.Shake.ShakeY),
+                                math.random(-Configurations.AimAssist.Shake.ShakeZ,Configurations.AimAssist.Shake.ShakeZ)
+                            )
+                        )
+
+                        Camera.CFrame = Camera.CFrame:Lerp(main, Configurations.AimAssist.Smoothness.SmoothingFactor)
+                    else
+                        local main = CFrame.new(
+                            Camera.CFrame.Position,
+                            assistpos + assistpredictedpos + Vector3.new(
+                                math.random(-Configurations.AimAssist.Shake.Shaking,Configurations.AimAssist.Shake.Shaking),
+                                math.random(-Configurations.AimAssist.Shake.Shaking,Configurations.AimAssist.Shake.Shaking),
+                                math.random(-Configurations.AimAssist.Shake.Shaking,Configurations.AimAssist.Shake.Shaking)
+                            )
+                        )
+
+                        Camera.CFrame = Camera.CFrame:Lerp(main, Configurations.AimAssist.Smoothness.SmoothingFactor)
+                    end
+                else
+                    local main = CFrame.new(
+                        Camera.CFrame.Position,
+                        assistpos + assistpredictedpos
+                    )
+
+                    Camera.CFrame = Camera.CFrame:Lerp(main, Configurations.AimAssist.Smoothness.SmoothingFactor)
+                end
+            else
+                Camera.CFrame = CFrame.new(
+                    Camera.CFrame.Position,
+                    assistpos + assistpredictedpos
+                )
+            end
+        end
+
+            -- this is just a shitty method for the airshot, but it works fine
+            if Configurations.AimAssist.Airshot.Enabled then 
+                if Configurations.AimAssist.Airshot.UseAirprediction then 
+                    if Configurations.AimAssist.Airshot.UseJumpOffset then 
+                        if assistoldpart.Character.Humanoid.FloorMaterial == Enum.Material.Air or assistoldpart.Character.Humanoid:GetState() == Enum.HumanoidStateType.FallingDown or assistoldpart.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall then 
+                            Configurations.AimAssist.Aimpart = Configurations.AimAssist.Airshot.Aimpart
+                            SilentPredictionPos = (assisttarget.Character[Configurations.AimAssist.Aimpart].Velocity) * Configurations.AimAssist.Airshot.AirPrediction + Vector3.new(0,Configurations.AimAssist.Airshot.JumpOffset,0)
+                        else
+                            SilentPredictionPos = (assistoldpart.Character[Configurations.AimAssist.Aimpart].Velocity) * Configurations.AimAssist.Prediction
+                            Configurations.AimAssist.Aimpart = assistoldpart
+                        end
+                    else
+                        if assistoldpart.Character.Humanoid.FloorMaterial == Enum.Material.Air or assistoldpart.Character.Humanoid:GetState() == Enum.HumanoidStateType.FallingDown or assistoldpart.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall then 
+                        Configurations.AimAssist.Aimpart = Configurations.AimAssist.Airshot.Aimpart
+                        SilentPredictionPos = (assistoldpart.Character[Configurations.AimAssist.Aimpart].Velocity) * Configurations.AimAssist.Airshot.AirPrediction
+                        else
+                            SilentPredictionPos = (assistoldpart.Character[Configurations.AimAssist.Aimpart].Velocity) * Configurations.AimAssist.Prediction
+                            Configurations.AimAssist.Aimpart = assistoldpart
+                        end
+                    end
+                else
+                    if assistoldpart.Character.Humanoid.FloorMaterial == Enum.Material.Air or assistoldpart.Character.Humanoid:GetState() == Enum.HumanoidStateType.FallingDown or assistoldpart.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall then 
+                        Configurations.AimAssist.Aimpart = Configurations.AimAssist.Airshot.Aimpart
+                    else
+                        SilentPredictionPos = (assistoldpart.Character[Configurations.AimAssist.Aimpart].Velocity) * Configurations.AimAssist.Prediction
+                        Configurations.AimAssist.Aimpart = assistoldpart
+                    end
+                end
+            end
+    end
+
+    if Configurations.Target.Enabled then 
+        targetpos = targetaim.Character[Configurations.Target.Aimpart].Position
+        targetpredictionpos = targetaim.Character[Configurations.Target.Aimpart].Velocity * Configurations.Target.Prediction
+
+        if Configurations.Target.AutomaticPrediction then 
+            local PingStats = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+            local Value = tostring(PingStats)
+            local PingValue = Value:split(" ")
+            local PingNumber = tonumber(PingValue[1])
+                if PingNumber < 30 then
+                    Configurations.Target.Prediction = 0.12588
+                elseif PingNumber < 40 then
+                    Configurations.Target.Prediction = 0.11
+                elseif PingNumber < 50 then
+                    Configurations.Target.Prediction = 0.125
+                elseif PingNumber < 60 then
+                    Configurations.Target.Prediction = 0.127668
+                elseif PingNumber < 70 then
+                    Configurations.Target.Prediction = 0.11243
+                elseif PingNumber < 80 then
+                    Configurations.Target.Prediction = 0.119
+                elseif PingNumber < 90 then
+                    Configurations.Target.Prediction = 0.1347
+                elseif PingNumber < 100 then
+                    Configurations.Target.Prediction = 0.13626
+                elseif PingNumber < 110 then
+                    Configurations.Target.Prediction = 0.13829
+                elseif PingNumber < 120 then
+                    Configurations.Target.Prediction = 0.146
+                elseif PingNumber < 130 then
+                    Configurations.Target.Prediction = 0.149
+                elseif PingNumber < 140 then
+                    Configurations.Target.Predictionn= 0.151
+                elseif PingNumber < 150 then
+                    Configurations.Target.Prediction = 0.1652131
+                elseif PingNumber < 160 then
+                    Configurations.Target.Prediction = 0.125333
+                elseif PingNumber < 170 then
+                    Configurations.Target.Prediction = 0.1223333
+                elseif PingNumber < 180 then
+                    Configurations.Target.Prediction = 0.15
+                elseif PingNumber < 190 then
+                    Configurations.Target.Prediction= 0.1923111
+                elseif PingNumber < 200 then
+                    Configurations.Target.Prediction = 0.165771
+                elseif PingNumber < 210 then
+                    Configurations.Target.Prediction = 0.1746
+                end
+            end
+
+            if Configurations.Target.Strafe.Enabled then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetaim.Character.HumanoidRootPart.Position + Vector3.new(math.cos(tick() * Configurations.Target.Strafe.Speed) * Configurations.Target.Strafe.Distance,Configurations.Target.Strafe.Height,math.sin(tick() * Configurations.Target.Strafe.Speed) * Configurations.Target.Strafe.Distance))
+            end
+        end
+end)
+
+
+while Configurations.AimAssist.Humanize.Enabled == true do
+    Configurations.AimAssist.Aimpart = math.random(#BodyParts, "All")
+    task.wait(Configurations.AimAssist.Humanize.Power)
+end
+
+
+
+-- the silent aim, i made this on solara because i dont own wave
+local function SilentAim(tool)  
+    if tool:IsA("Tool") then  
+        tool.Activated:Connect(function()
+            if Configurations.SilentAim.Enabled and SilentTarget then  
+                local Arguments = {  
+                    getArg(),  
+                   SilentPos + SilentPredictionPos
+                }  
+                
+                getRemote():FireServer(unpack(Arguments))  
+            end  
+        end)  
+    end  
+end  
+
+local function TargetAim(tool)  
+    if tool:IsA("Tool") then  
+        tool.Activated:Connect(function()
+            if Configurations.Target.Enabled and targetaim then  
+                local Arguments = {  
+                    getArg(),  
+                   targetpos + targetpredictionpos
+                }  
+                
+                getRemote():FireServer(unpack(Arguments))  
+            end  
+        end)  
+    end  
+end  
+
+LocalPlayer.CharacterAdded:Connect(function(character)  
+    character.ChildAdded:Connect(SilentAim)  
+    character.ChildAdded:Connect(TargetAim)  
+end)  
+
+if LocalPlayer.Character then  
+    LocalPlayer.Character.ChildAdded:Connect(SilentAim)  
+    LocalPlayer.Character.ChildAdded:Connect(TargetAim)  
+end   
+
+
+--* Example Code to show user data *-- 
+print(' Logged In!')
+print(' User Data')
+print(' Username:' .. data.info.username)
+print(' IP Address:' .. data.info.ip)
+print(' Created at:' .. data.info.createdate)
+print(' Last login at:' .. data.info.lastlogin)
